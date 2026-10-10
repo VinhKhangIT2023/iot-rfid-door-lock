@@ -1,0 +1,1 @@
+{"name":"iot-door-middleware","version":"1.0.0","private":true,"dependencies":{"node-red":"^5.0.7"},"scripts":{"flow":"node generate_flow.js","test":"node tests.js","start":"node start.js"}}

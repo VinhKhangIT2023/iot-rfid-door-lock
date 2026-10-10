@@ -1,0 +1,1 @@
+module.exports={uiHost:'127.0.0.1',uiPort:1880,httpAdminRoot:'/editor',httpNodeRoot:'/',flowFile:'flows.json',functionGlobalContext:{doorCore:require('./core.js')},contextStorage:{default:{module:'memory'}},logging:{console:{level:'info',metrics:false,audit:false}}};
