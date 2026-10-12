@@ -31,7 +31,7 @@ Trong VS Code chọn **File -> Open Folder** và mở chính thư mục vừa cl
 
 ### 1. Chọn topic riêng nếu có nhiều bản chạy cùng lúc
 
-Firmware và middleware mặc định cùng dùng BASE `iot/nhom25/door8/w4-927-a61c` trên `test.mosquitto.org:1883`. Nếu có người khác cũng chạy bản clone, chọn BASE riêng rồi sửa đồng bộ `include/network_config.h`, `middleware/core.js` và topic subscribe trong `middleware/generate_flow.js`. Đổi BASE trước khi build firmware và tạo flow. Nếu đổi broker, sửa cả cấu hình firmware và node broker trong generator.
+Firmware và middleware mặc định cùng dùng BASE `iot/nhom25/door8/w4-927-a61c` trên `test.mosquitto.org:1883`. Nếu có người khác cũng chạy bản clone, chọn BASE riêng rồi sửa đồng bộ `include/network_config.h` và `middleware/core.js`; generator lấy topic subscribe từ core. Đổi BASE trước khi build firmware và tạo flow. Nếu đổi broker, sửa cả cấu hình firmware và node broker trong generator.
 
 ### 2. Build firmware
 
@@ -73,8 +73,11 @@ Trong Command Palette của VS Code chọn **Wokwi: Start Simulator**. Máy cầ
 3. Thử RFID bằng thẻ Blue/Green, quan sát servo chuyển từ 0° sang 90°. Nếu không mở cửa, firmware khóa lại sau 5 giây mô phỏng.
 4. Thử **Đọc trạng thái**, rồi **Mở khóa** và xác nhận trong hộp thoại. Đọc ACK và quan sát servo; thông báo gửi thành công chưa xác nhận servo đã chuyển động.
 5. Khi khóa đang LOCKED, chuyển công tắc cửa sang OPEN để quan sát báo động và cảnh báo `DOOR_FORCED`.
+6. Đóng cửa, chờ LOCKED. Quét Blue và mở cửa trước khi hết cửa sổ 5 giây mô phỏng, giữ OPEN trên 15 giây mô phỏng để nhận lời nhắc `LEFT_OPEN_WARN`. Web hiển thị lời nhắc màu vàng và lịch sử R2; cửa vẫn `DOOR_OPEN_AUTH`, R2 không gửi lệnh mở khóa. Đóng rồi mở hợp lệ ở đợt khác để kiểm tra cảnh báo xuất hiện lại.
 
 Web có thể mở ngay cả khi chưa chạy Wokwi; lúc đó nút điều khiển bị vô hiệu vì chưa có dữ liệu thiết bị. Không chạy Python console làm controller đồng thời với Web.
+
+Nếu Wokwi Terminal chỉ hiển thị log, có thể dùng [Serial forwarding RFC2217](https://docs.wokwi.com/vscode/project-config#serial-port-forwarding) qua cổng 4000 đã có trong `wokwi.toml`. Kết nối Serial này phục vụ chẩn đoán, không cần cho luồng RFID/Web chính. `netoff`/`neton` là lệnh local test của firmware; phải kiểm tra log xác nhận và availability trước khi kết luận mạng đã dừng/phục hồi.
 
 ## Có cần venv không?
 

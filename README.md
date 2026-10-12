@@ -17,7 +17,7 @@ Mô hình khóa cửa RFID dùng **ESP32, MQTT, Node-RED và Web App**, mô ph�
 - **Cảnh báo:** phát hiện cửa mở khi chưa được cấp quyền, nhắc khi mở cửa hợp lệ quá lâu.
 - **MQTT:** trao đổi state, event, availability, command và ACK; kiểm tra session/sequence.
 - **Web:** dashboard, lịch sử bản tin, cảnh báo, lệnh đọc trạng thái/mở khóa và hộp xác nhận.
-- **Middleware:** mã điều khiển cho API, kiểm tra online/freshness, chặn sử dụng state retained để cấp quyền và rule DOOR_FORCED.
+- **Middleware:** mã điều khiển cho API, kiểm tra online/freshness, chặn sử dụng state retained để cấp quyền, hai rule DOOR_FORCED/LEFT_OPEN_WARN và lịch sử xử lý từng rule.
 
 ## Hoạt động thế nào?
 
@@ -98,13 +98,14 @@ CHANGELOG.md         Lịch sử thay đổi
 
 ## Trạng thái và giới hạn
 
-Bản hiện tại kế thừa code đã bàn giao đến tuần 6. Hồ sơ mô phỏng ghi nhận **8/8 bài kiểm thử đạt trong phạm vi từng bài**; các giới hạn quan sát được nêu ở [Results](docs/results.md). Test middleware offline không thay cho E2E.
+Bản hiện tại phát triển từ baseline tuần 6, bổ sung rule nhắc đóng cửa và lịch sử xử lý ở tuần 7. Ngày 12/10/2026, **23/23 regression tuần 7 và bộ middleware kế thừa đạt; 7/7 bài P0 đạt theo phạm vi từng bài** gồm logic, HTTP và Wokwi. Đã chạy hai đợt R1/R2, RFID/Web và offline/reconnect. Xem kết quả mới và lịch sử tuần 6 tại [Results](docs/results.md).
 
-Project phục vụ học tập/mô phỏng. Broker mặc định là công cộng, chưa có TLS/ACL; whitelist dựa trên UID. Chưa thử khóa cửa thật. Telegram, mở khóa bằng giọng nói, rule thứ hai và NVS/gửi bù chưa được triển khai.
+Project phục vụ học tập/mô phỏng. Broker mặc định là công cộng, chưa có TLS/ACL; whitelist dựa trên UID. Chưa thử khóa cửa thật. Telegram, mở khóa bằng giọng nói và NVS/gửi bù chưa được triển khai.
 
 ## Hướng phát triển
 
-- [ ] Mở rộng rule và kiểm thử cho chức năng mới.
+- [x] Bổ sung rule nhắc đóng cửa mở hợp lệ quá lâu và regression logic.
+- [x] Xác minh Wokwi cho hai rule, reset và hai đợt hoạt động.
 - [ ] Bổ sung lượt E2E lặp lại, kiểm tra stale khi vẫn online và tình huống mạng/khởi động lại.
 - [ ] Bổ sung ảnh hoặc video mô hình, video demo và kết quả chạy trên máy khác.
 

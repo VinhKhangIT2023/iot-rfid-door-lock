@@ -4,6 +4,17 @@
 
 Chỉ ghi thay đổi đã thực hiện. Project chưa có bản release được đánh số.
 
+## 12/10/2026 — Hai quy tắc tự động
+
+- Bổ sung R2 chuyển LEFT_OPEN_WARN trực tiếp thành lời nhắc đóng cửa, cờ chống lặp và reset riêng.
+- R1/R2 ghi lịch sử rule; R1 ghi status đã gửi hoặc lý do bị chặn.
+- Web phân biệt cảnh báo đỏ/vàng và hiển thị lịch sử xử lý cảnh báo.
+- Generator lấy topic từ core, ghi telemetry/rule riêng và giữ chế độ log độc lập hoặc theo tuần.
+- Thêm 23 regression tuần 7 vào npm test, cùng bộ test kế thừa. Tất cả đạt trong phạm vi logic offline.
+- Kiểm tra HTTP trên Node-RED thật: 403 mã sai, 409 khi chưa có state trực tiếp, không command mới. Retained startup không tạo cảnh báo hoặc cấp quyền.
+- Firmware và ngưỡng giữ nguyên, binary đối chiếu baseline W6. 7/7 P0 đạt theo phạm vi logic/HTTP/Wokwi: baseline, hai đợt R1/R2, retained startup và netoff/neton với session mới/status/ACK.
+- R2 đo uptime event 14999/15000 ms (~15s), không command tự mở khóa. Người dùng xác nhận servo và nghe còi. P1 stale-online có kiểm soát và hồi quy lockout/remote chuyển bước tiếp theo.
+
 ## 11/10/2026
 
 ### Thay đổi

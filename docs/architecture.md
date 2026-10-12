@@ -18,6 +18,17 @@ MQTT sử dụng các hậu tố `/availability`, `/state`, `/event`, `/cmd`, `/
 
 HTTP có `GET /api/door` để đọc dữ liệu và `POST /api/command` để gửi body `{"action":"status"}` hoặc `{"action":"unlock"}`, kèm header `Authorization: Bearer <mã điều khiển>`. Phản hồi 202 nghĩa là đã gửi lệnh; cần đọc ACK và quan sát mô hình để xác nhận kết quả.
 
+## Hai quy tắc middleware
+
+| Quy tắc | Trigger và kết quả | Reset |
+|---|---|---|
+| R1 | DOOR_FORCED trực tiếp tạo cảnh báo đỏ và một yêu cầu status qua cổng gửi chung. Ghi status sent/blocked, seq hoặc lý do. Không tự thử lại yêu cầu bị chặn | State trực tiếp ngoài ALARM hoặc session trực tiếp mới |
+| R2 | LEFT_OPEN_WARN trực tiếp với state DOOR_OPEN_AUTH, đã quan sát state trực tiếp DOOR_OPEN_AUTH/OPEN, tạo lời nhắc vàng. Không tạo status/unlock, không chuyển state sang ALARM | DOOR_CLOSED trực tiếp, state trực tiếp CLOSED hoặc session trực tiếp mới |
+
+Cờ hai rule độc lập; mỗi đợt tạo một cảnh báo. Retained không tạo cảnh báo hoặc reset cờ. R2 kiểm tra state trực tiếp tương thích, không áp dụng thêm ranh giới freshness 12 giây như cổng gửi command. Event thiếu session; `observed_session` trong rule log lấy từ state đã quan sát và không bảo đảm ghép tuyệt đối event đến muộn qua reconnect.
+
+API `/api/door` có `rule_history`. File JSONL ghi MQTT row, `rule` và `rule_action`; bộ nhớ giữ tối đa 200 MQTT rows, 200 rule rows, 50 alerts. Restart middleware xóa bộ nhớ/cờ, file log vẫn ghi nối tiếp. ACK hiện chứa seq/result/state/uptime nhưng không có action/session; đối chiếu seq với command và session của command/state trong lượt chạy.
+
 ## Mạch mô phỏng
 
 Sơ đồ dây đầy đủ nằm trong [diagram.json](../diagram.json). Chân ứng dụng:
