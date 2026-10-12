@@ -3,7 +3,43 @@ const BASE = 'iot/nhom25/door8/w4-927-a61c';
 const FRESHNESS_MS = 12000;
 function initial() {
   return {online:false, broker:false, state:null, freshAt:0, seq:0,
-    alerts:[], history:[], ruleHistory:[], alarm:false, leftOpen:false};
+    alerts:[], history:[], ruleHistory:[], alarm:false, leftOpen:false,
+    rfidHistory:[], rfidCounts:{total:0,accepted:0,denied:0,ignored:0}};
+}
+function recordRfid(model, row) {
+  const data=row.data;
+  if(row.retained || !row.topic.endsWith('/event')) return;
+  const detail=typeof data.detail==='string'?data.detail:'';
+  let outcome;
+  if(data.evt==='UNLOCK_GRANTED' && /(?:^|\s)src=RFID(?:\s|$)/.test(detail)) outcome='accepted';
+  else if(data.evt==='CARD_DENIED') outcome='denied';
+  else if(data.evt==='CARD_IGNORED_LOCKOUT') outcome='ignored';
+  else if(data.evt==='LOCKOUT_START') outcome='lockout_start';
+  else if(data.evt==='LOCKOUT_END') outcome='lockout_end';
+  else return;
+  const uidMatch=detail.match(/(?:^|\s)uid=([a-f0-9]+)(?=\s|$)/i);
+  const uid=uidMatch && [8,14,20].includes(uidMatch[1].length)?uidMatch[1].toUpperCase():null;
+  if(['accepted','denied','ignored'].includes(outcome) && !uid) return;
+  const name=detail.match(/(?:^|\s)name=([^\s]+)/);
+  const attempts=detail.match(/(?:^|\s)fail=(\d+)\/(\d+)(?=\s|$)/);
+  model.rfidHistory.push({time_utc:row.time_utc,event:data.evt,outcome,uid,
+    name:name?name[1]:null,attempt:attempts?Number(attempts[1]):null,
+    attempt_limit:attempts?Number(attempts[2]):null,
+    uptime_ms:Number.isFinite(data.uptime_ms)?data.uptime_ms:null,
+    observed_session:model.state?model.state.session:null,session_source:'observed_state'});
+  model.rfidHistory=model.rfidHistory.slice(-100);
+  if(['accepted','denied','ignored'].includes(outcome)) {
+    model.rfidCounts.total++; model.rfidCounts[outcome]++;
+  }
+}
+function view(model, now) {
+  const age=model.freshAt?now-model.freshAt:null;
+  const connection=!model.broker?'broker_offline':!model.online?'device_offline':
+    !model.state||age===null?'waiting_state':age>FRESHNESS_MS?'stale':'ready';
+  return {state:model.state,age_ms:age,ready:connection==='ready',connection,
+    broker_connected:model.broker,device_online:model.online,ack:model.ack||null,
+    alerts:model.alerts,history:model.history,rule_history:model.ruleHistory,
+    rfid_history:model.rfidHistory,rfid_counts:model.rfidCounts};
 }
 function saveRule(model, row) {
   model.ruleHistory.push(row);
@@ -41,6 +77,7 @@ function ingest(model, topic, payload, retained, now) {
   if(suffix==='event' && (!data || Array.isArray(data) || typeof data.evt!=='string' || !data.evt)) return {error:'event_schema'};
   const row={time_utc:new Date(now).toISOString(),topic,retained:!!retained,data};
   model.history.push(row); model.history=model.history.slice(-200);
+  recordRfid(model,row);
   let request=null, rule=null;
   if(suffix==='availability') { model.online=data==='online'; if(!model.online) model.freshAt=0; }
   if(suffix==='state') {
@@ -81,4 +118,4 @@ function command(model, action, now) {
   model.seq=Math.max(model.seq+1,Math.floor(now/1000));
   return {topic:BASE+'/cmd',payload:JSON.stringify({session:model.state.session,seq:model.seq,action}),qos:1,retain:false};
 }
-module.exports={BASE,FRESHNESS_MS,initial,ingest,command,recordRuleAction};
+module.exports={BASE,FRESHNESS_MS,initial,ingest,command,recordRuleAction,view};

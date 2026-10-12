@@ -6,9 +6,9 @@ Mô hình khóa cửa RFID dùng **ESP32, MQTT, Node-RED và Web App**, mô ph�
 
 ## Demo
 
-<img src="docs/images/dashboard-w6.png" alt="Dashboard nhận dữ liệu từ ESP32 mô phỏng: Online, LOCKED và CLOSED" width="600">
+<img src="docs/images/dashboard-current.png" alt="Dashboard mới gồm trạng thái cửa, điều khiển và theo dõi RFID" width="800">
 
-Ảnh từ lượt chạy mô phỏng ngày 09/10/2026. Xem thêm [cảnh báo mở cửa trái phép và kết quả kiểm thử](docs/results.md).
+Giao diện mới ngày 12/10/2026; ảnh chụp lúc chờ thiết bị, không dùng làm minh chứng quét thẻ. Xem [kết quả kiểm thử và các ảnh mô phỏng trước đó](docs/results.md).
 
 ## Chức năng
 
@@ -16,7 +16,7 @@ Mô hình khóa cửa RFID dùng **ESP32, MQTT, Node-RED và Web App**, mô ph�
 - **Điều khiển khóa:** relay/servo, chờ mở cửa và khóa lại theo timer.
 - **Cảnh báo:** phát hiện cửa mở khi chưa được cấp quyền, nhắc khi mở cửa hợp lệ quá lâu.
 - **MQTT:** trao đổi state, event, availability, command và ACK; kiểm tra session/sequence.
-- **Web:** dashboard, lịch sử bản tin, cảnh báo, lệnh đọc trạng thái/mở khóa và hộp xác nhận.
+- **Web:** dashboard responsive với ba tab Tổng quan/RFID/Kỹ thuật; UID, kết quả quét thẻ, khóa tạm, tìm kiếm/lọc lịch sử; cảnh báo, status/unlock và hộp xác nhận.
 - **Middleware:** mã điều khiển cho API, kiểm tra online/freshness, chặn sử dụng state retained để cấp quyền, hai rule DOOR_FORCED/LEFT_OPEN_WARN và lịch sử xử lý từng rule.
 
 ## Hoạt động thế nào?
@@ -84,7 +84,7 @@ Nếu nhiều người chạy bản clone đồng thời, chọn topic BASE riê
 ```text
 src/                 Firmware ESP32
 include/             Header và cấu hình mạng
-application/         Web App
+application/         HTML, CSS và JavaScript dashboard
 middleware/          Node-RED, generator, logic và test
 tools/              Python console tùy chọn
 docs/               Hướng dẫn, kết quả và ảnh demo
@@ -98,7 +98,7 @@ CHANGELOG.md         Lịch sử thay đổi
 
 ## Trạng thái và giới hạn
 
-Bản hiện tại phát triển từ baseline tuần 6, bổ sung rule nhắc đóng cửa và lịch sử xử lý ở tuần 7. Ngày 12/10/2026, **23/23 regression tuần 7 và bộ middleware kế thừa đạt; 7/7 bài P0 đạt theo phạm vi từng bài** gồm logic, HTTP và Wokwi. Đã chạy hai đợt R1/R2, RFID/Web và offline/reconnect. Xem kết quả mới và lịch sử tuần 6 tại [Results](docs/results.md).
+Bản hiện tại phát triển từ baseline tuần 6, bổ sung rule nhắc đóng cửa, lịch sử xử lý và dashboard theo dõi RFID ở tuần 7. Ngày 12/10/2026, **23/23 regression tuần 7, 8/8 bài logic dashboard và bộ middleware kế thừa đạt**. Buổi kiểm thử trước nâng cấp dashboard ghi nhận 7/7 bài P0 theo phạm vi logic/HTTP/Wokwi, hai đợt R1/R2 và offline/reconnect. Phạm vi kiểm tra giao diện mới được ghi riêng tại [Results](docs/results.md).
 
 Project phục vụ học tập/mô phỏng. Broker mặc định là công cộng, chưa có TLS/ACL; whitelist dựa trên UID. Chưa thử khóa cửa thật. Telegram, mở khóa bằng giọng nói và NVS/gửi bù chưa được triển khai.
 

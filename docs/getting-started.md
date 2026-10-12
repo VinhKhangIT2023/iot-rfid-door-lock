@@ -77,6 +77,10 @@ Trong Command Palette của VS Code chọn **Wokwi: Start Simulator**. Máy cầ
 
 Web có thể mở ngay cả khi chưa chạy Wokwi; lúc đó nút điều khiển bị vô hiệu vì chưa có dữ liệu thiết bị. Không chạy Python console làm controller đồng thời với Web.
 
+Dashboard có ba tab: **Tổng quan** để xem cửa/cảnh báo và điều khiển; **Hoạt động RFID** để xem UID, kết quả, số lượt, tìm kiếm và lọc; **Thông tin kỹ thuật** để xem ACK gốc, session, rule và MQTT. Quét Blue/Green trên Wokwi để thấy cấp quyền, Red để thấy từ chối. Nút mở khóa trên Web không được tính là quét thẻ. Thống kê chỉ tính sự kiện middleware đã nhận sau khi khởi động; restart xóa thống kê trên Web, log file vẫn còn. Giờ Web là UTC+7, log gốc giữ UTC.
+
+Khi sửa `application/index.html`, `styles.css` hoặc `dashboard.js`, dừng middleware, chạy `npm.cmd run flow`, chạy test và `npm.cmd start`, rồi tải lại Web. Generator nhúng các file vào flow, không cần cài công cụ frontend mới.
+
 Nếu Wokwi Terminal chỉ hiển thị log, có thể dùng [Serial forwarding RFC2217](https://docs.wokwi.com/vscode/project-config#serial-port-forwarding) qua cổng 4000 đã có trong `wokwi.toml`. Kết nối Serial này phục vụ chẩn đoán, không cần cho luồng RFID/Web chính. `netoff`/`neton` là lệnh local test của firmware; phải kiểm tra log xác nhận và availability trước khi kết luận mạng đã dừng/phục hồi.
 
 ## Có cần venv không?

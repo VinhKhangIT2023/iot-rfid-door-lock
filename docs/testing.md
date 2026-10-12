@@ -17,6 +17,14 @@ Test hiện có kiểm tra freshness, retained, offline, sequence, action, broke
 
 Sau khi sửa `application/index.html` hoặc generator, dừng middleware, tạo lại flow và khởi động lại. `flows.json` chứa HTML và đường dẫn log của máy đang chạy, nên được sinh tại chỗ và không commit. Nếu sửa flow trong editor, đưa thay đổi về generator trước khi tạo lại để tránh mất thay đổi. Sau khi sửa firmware, build lại rồi restart mô phỏng.
 
+## Kiểm tra dashboard/RFID
+
+`npm test` còn chạy 8 bài trong `tests_dashboard.js`: phân biệt nguồn RFID/REMOTE/SERIAL; UID 4/7 byte; thẻ bị từ chối và bỏ qua khi lockout; không tính event retained; giữ lịch sử qua heartbeat/reconnect; giới hạn 100 sự kiện và thống kê từ khi khởi động; các trạng thái kết nối; API và HTML/CSS/JavaScript được generator nhúng đúng. Chạy riêng bằng `npm run test:dashboard`.
+
+Sau khi sửa bất kỳ file HTML/CSS/JavaScript trong `application/`, sinh lại flow và restart middleware. Kiểm tra ba tab, tìm UID/tên, lọc kết quả, trạng thái không có kết quả, bố cục điện thoại, mã sai, xác nhận/hủy mở khóa và ACK khớp seq. Dữ liệu fixture dùng kiểm tra UI phải tách khỏi broker và ghi rõ; không tính là quét thẻ thật.
+
+Để kiểm tra trực tiếp: mở middleware trước, chạy Wokwi rồi quét Blue và Red. Web cần ghi một cấp quyền và một từ chối đúng UID; lệnh unlock trên Web không tăng số lượt RFID. Đối chiếu lockout trực tiếp với state mới, không chỉ nhìn lịch sử.
+
 ## Các tình huống đã thử trong mô phỏng
 
 Xem [bảng kết quả mô phỏng](results.md#kiểm-thử-mô-phỏng-ngày-09102026). Để chạy lại, thực hiện bước thử RFID/Web trong [hướng dẫn chạy](getting-started.md#4-khởi-động-mô-phỏng-và-thử), sau đó kiểm tra thêm mã sai, netoff/neton và cảnh báo. Lệnh Serial `netoff`/`neton` tạm dừng/phục hồi mạng của mô hình.

@@ -4,6 +4,15 @@
 
 Chỉ ghi thay đổi đã thực hiện. Project chưa có bản release được đánh số.
 
+## 12/10/2026 — Dashboard và theo dõi RFID
+
+- Thiết kế lại dashboard xanh đậm, minh họa cửa, trạng thái dễ đọc và ba tab Tổng quan/RFID/Kỹ thuật; hỗ trợ desktop/mobile.
+- Tách HTML, CSS và JavaScript; generator nhúng tại chỗ, không thêm dependency frontend.
+- Thêm lịch sử 100 sự kiện RFID, thống kê từ khi middleware khởi động, tìm UID/tên và lọc kết quả. Phân biệt cấp quyền, từ chối, bỏ qua khi khóa tạm và bắt đầu/kết thúc khóa tạm.
+- Chỉ tính event RFID trực tiếp; không tính unlock REMOTE/SERIAL hoặc retained. Khóa tạm hiện tại lấy từ state còn mới.
+- API phân biệt broker/device offline, chờ state và stale. Web đối chiếu ACK theo seq và tạm khóa nút khi chờ.
+- Thêm 8 bài logic dashboard đạt, giữ nguyên 23 bài tuần 7 và bộ kiểm thử kế thừa. Phạm vi kiểm tra UI và Wokwi được ghi riêng trong Results.
+
 ## 12/10/2026 — Hai quy tắc tự động
 
 - Bổ sung R2 chuyển LEFT_OPEN_WARN trực tiếp thành lời nhắc đóng cửa, cờ chống lặp và reset riêng.

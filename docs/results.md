@@ -14,7 +14,7 @@ Bản code phát triển từ tuần 6 của nhóm: ESP32 mô phỏng trên Wokw
 | Mạch mô phỏng | ESP32, RC522, công tắc cửa, relay, servo và buzzer trong diagram.json |
 | Kết nối | Wi-Fi/MQTT, state/event/availability/ack, session và sequence cho command |
 | Middleware | Model trạng thái, freshness, chặn offline/retained, history, R1 DOOR_FORCED và R2 LEFT_OPEN_WARN |
-| Web | Dashboard, trạng thái cửa/khóa, mã điều khiển, status/unlock, hộp xác nhận, ACK, cảnh báo đỏ/vàng và lịch sử xử lý rule |
+| Web | Dashboard responsive, ba tab Tổng quan/RFID/Kỹ thuật, trạng thái cửa/khóa, UID và kết quả quét, tìm/lọc RFID, mã điều khiển, status/unlock, xác nhận, ACK và cảnh báo |
 | Công cụ | Generator flow, test logic và Python console chẩn đoán tùy chọn |
 
 ## Kiểm thử mô phỏng ngày 09/10/2026
@@ -76,6 +76,24 @@ Các lần kiểm tra này không build lại firmware hay chạy Wokwi E2E mớ
 Chưa build firmware mới: sử dụng binary tuần 6 có sẵn vì không đổi source firmware. Không tính bộ fixture là kết quả Wokwi, chuyển động servo hoặc âm còi.
 
 Lượt R2 đầu mở sau cấp quyền 7558 ms, vượt cửa sổ 5000 ms nên đúng hành vi ALARM; đã thử lại đúng thao tác. Ngưỡng firmware vẫn 15000 ms, timestamp event lấy riêng với thời điểm FSM nên số đo 14999 ms không chứng minh cảnh báo trước ngưỡng nội bộ 1 ms. Serial lần đầu nhận dòng không hợp lệ; lần đó 409 do stale không được tính là offline. Lượt RFC2217 sau xác nhận offline và phục hồi thực.
+
+## Nâng cấp dashboard/RFID ngày 12/10/2026
+
+Sau buổi kiểm thử automation, giao diện được thiết kế lại với màu xanh đậm, minh họa cửa và trạng thái tiếng Việt. Ba tab tách thao tác thường dùng, hoạt động RFID và log kỹ thuật. Firmware không đổi; dữ liệu UID/kết quả lấy từ event đã có.
+
+| Kiểm tra mới | Kết quả và phạm vi |
+|---|---|
+| Logic dashboard | 8/8 đạt: parsing nguồn/UID, retained, các kết quả RFID, bounded history/counters, kết nối và flow/API |
+| Regression | 23/23 bài tuần 7 và bộ middleware kế thừa vẫn đạt |
+| Tương tác trình duyệt | 13 mục đạt trên server fixture localhost riêng: lọc, tìm UID, empty state, mã sai, xác nhận/hủy, chờ ACK khớp seq, bàn phím, stale, lockout và ALARM/OPEN |
+| Bố cục | Đã xem desktop và mobile 390×844; không tràn ngang trang, ba tab hoạt động, không lỗi console |
+| Định dạng event thực tế | Phát lại log MQTT đã ghi trong bộ nhớ; UID 01020304/name blue và số lượt RFID được parse đúng. Đây không phải lượt quét mới |
+| Web/Node-RED thực | API mới và HTML/CSS/JS tải được; khi chưa có thiết bị, lịch sử trống và nút bị chặn. HTTP thật: mã sai 403, mã đúng lúc chưa sẵn sàng 409, số command trước/sau đều 0 |
+| Quét Blue/Red trực tiếp trên bản mới | Chưa xác minh; lúc chụp ảnh middleware chưa nhận state từ Wokwi |
+
+![Dashboard mới khi chờ thiết bị](images/dashboard-current.png)
+
+Ảnh này ghi nhận giao diện và empty state, không chứng minh RFID E2E. Kết quả P0 ở mục trước thuộc buổi kiểm thử automation trước nâng cấp, không tự chuyển thành kết quả kiểm thử lại mọi chức năng của UI mới. Thống kê trên Web tính từ khi middleware khởi động, giữ 100 sự kiện RFID và xóa bộ nhớ khi restart. Khóa tạm hiện tại chỉ hiển thị là đã xác nhận khi state còn mới.
 
 ## Phần chưa triển khai hoặc chưa có kết quả
 
