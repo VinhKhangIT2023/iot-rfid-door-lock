@@ -85,7 +85,9 @@ function ingest(model, topic, payload, retained, now) {
       if(!model.state || model.state.session!==data.session) {
         model.seq=0; model.alarm=false; model.leftOpen=false;
       }
-      model.state=data; model.freshAt=now;
+      // A direct state proves the device is live. An old retained availability
+      // or a previous simulator's delayed will must not keep it offline forever.
+      model.online=true; model.state=data; model.freshAt=now;
       if(data.state!=='ALARM') model.alarm=false;
       if(data.door==='CLOSED') model.leftOpen=false;
     }

@@ -95,7 +95,27 @@ Sau buổi kiểm thử automation, giao diện được thiết kế lại vớ
 
 Ảnh này ghi nhận giao diện và empty state, không chứng minh RFID E2E. Kết quả P0 ở mục trước thuộc buổi kiểm thử automation trước nâng cấp, không tự chuyển thành kết quả kiểm thử lại mọi chức năng của UI mới. Thống kê trên Web tính từ khi middleware khởi động, giữ 100 sự kiện RFID và xóa bộ nhớ khi restart. Khóa tạm hiện tại chỉ hiển thị là đã xác nhận khi state còn mới.
 
+## Tích hợp tuần 8 ngày 13/10/2026
+
+Đã build firmware mới và kiểm tra trên Wokwi/Node-RED thực. Sửa lỗi để mô phỏng chạy im nhưng dashboard thành offline: heartbeat 1 giây mô phỏng, nghỉ loop 5ms, Wi-Fi channel 6; state trực tiếp hợp lệ phục hồi cờ online. Freshness vẫn 12 giây PC và retained không cấp quyền. Event/ACK có session do MQTT worker gắn.
+
+| Kiểm tra | Kết quả |
+|---|---|
+| Build | SUCCESS, RAM14%, Flash59,7% |
+| Logic | Bộ kế thừa đạt, 23/23 W7, 8/8 dashboard, 11/11 tích hợp W8; là fixture |
+| Chu kỳ RFID thực | 10/10 Blue → OPEN hợp lệ → CLOSED → tự khóa; 9 vòng có ảnh servo OPEN |
+| Web thực | 10/10 chu kỳ click/xác nhận, command/ACK đúng phiên/seq, servo và OPEN/CLOSED/tự khóa |
+| R1/R2 | Mỗi rule hai đợt riêng, đóng và kích hoạt lại; R2 sau15.001ms mô phỏng, không tự unlock |
+| Stale-online | stateoff khi MQTT còn online → API409; stateon → state mới/statusACK |
+| Mất mạng | netoff409, Blue local mở/đóng/tự khóa; neton phiên mới/Web status và unlock ACK |
+| Restart | Node-RED retained không cấp quyền; ESP32 phiên mới/LOCKED; command phiên cũ rejected |
+| Liên tục | 900,69 giây PC, 893/893 mẫu ready, 0 lỗi HTTP và 0 mẫu offline trong khoảng đo |
+
+M4 đạt nội bộ trong phạm vi mô phỏng, P0 kỹ thuật hoàn tất. Có20 chu kỳ đủ và thêm một chu kỳ Web sau reconnect. Generator và test chạy từ source mới không secrets/node_modules/flow cũ, chưa coi là một người khác chạy E2E. ACK không tự chứng minh actuator; ảnh servo có ở các vòng RFID. Chưa có video liền mạch và người khác chạy độc lập. Lỗi serialize JSON trong lượt phát triển đầu đã sửa bằng input const trước build cuối; lượt sai thao tác mở trễ không tính vào chu kỳ hợp lệ.
+
+![Web điều khiển servo và cửa OPEN trên mô hình tuần 8](images/demo-w8.jpg)
+
 ## Phần chưa triển khai hoặc chưa có kết quả
 
-Telegram, mở khóa bằng giọng nói, NVS/gửi bù và cấu hình broker TLS/ACL chưa được triển khai. Chưa thử khóa cửa thật. Stale khi vẫn online chưa có phép thử có kiểm soát từ firmware; chưa hồi quy lockout/remote tuần 7. Event firmware chưa có session, nên session trong rule log chỉ là session quan sát từ state gần nhất. Servo/còi có xác nhận văn bản của người quan sát, chưa có video/ghi âm.
+Telegram, mở khóa bằng giọng nói, NVS/gửi bù và cấu hình broker TLS/ACL chưa được triển khai. Chưa thử khóa cửa thật hoặc hồi quy lockout/remote trực tiếp trên binary tuần 8. Event/ACK firmware đã có session; trường observed_session trong rule log vẫn lấy state gần nhất. Chưa có video/ghi âm.
 

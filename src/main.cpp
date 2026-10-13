@@ -370,6 +370,8 @@ void handleCommand(const char* cmd, Source src) {
   else if (strcasecmp(cmd, "resetstat") == 0) loopMaxUs = 0;
   else if (src == Source::SERIAL_TEST && strcasecmp(cmd, "netoff") == 0) networkPauseForTest(true);
   else if (src == Source::SERIAL_TEST && strcasecmp(cmd, "neton") == 0) networkPauseForTest(false);
+  else if (src == Source::SERIAL_TEST && strcasecmp(cmd, "stateoff") == 0) networkPauseStateForTest(true);
+  else if (src == Source::SERIAL_TEST && strcasecmp(cmd, "stateon") == 0) networkPauseStateForTest(false);
   else                                        logEvent("CMD_UNKNOWN", cmd);
 }
 
@@ -412,7 +414,7 @@ void setup() {
   stateSince = now;
   setLock(false);
 
-  Serial.println("=== FW v3.0 (Tuan 4): local FSM + MQTT worker ===");
+  Serial.println("=== FW week 8: local FSM + MQTT worker, heartbeat 1s ===");
   if (doorStable) logEvent("BOOT_DOOR_OPEN", "door open at boot - no alarm until next open");
   printStatus();
   networkBegin();
@@ -444,4 +446,7 @@ void loop() {
 
   unsigned long dur = micros() - t0;
   if (dur > loopMaxUs) loopMaxUs = dur;
+  // Yield between short FSM passes so idle polling does not saturate Wokwi.
+  // loopMaxUs measures active work above, excluding this intentional sleep.
+  delay(5);
 }

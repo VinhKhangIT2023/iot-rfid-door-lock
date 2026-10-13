@@ -9,3 +9,5 @@ void networkAck(uint32_t sequence, const char* result, const char* state);
 bool networkIsOnline();
 void networkReport();
 void networkPauseForTest(bool paused);
+// Serial-only diagnostic: stop state while MQTT and local door logic keep running.
+void networkPauseStateForTest(bool paused);

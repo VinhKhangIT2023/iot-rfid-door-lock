@@ -7,9 +7,11 @@
   },
   "scripts": {
     "flow": "node generate_flow.js",
-    "test": "node tests.js && node tests_w7.js && node tests_dashboard.js",
+    "test": "node tests.js && node tests_w7.js && node tests_dashboard.js && node tests_w8.js",
     "start": "node start.js",
     "test:w7": "node tests_w7.js",
-    "test:dashboard": "node tests_dashboard.js"
+    "test:dashboard": "node tests_dashboard.js",
+    "test:w8": "node tests_w8.js",
+    "observe": "node observe.js"
   }
 }

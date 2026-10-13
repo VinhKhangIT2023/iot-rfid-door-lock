@@ -83,7 +83,21 @@ Khi sửa `application/index.html`, `styles.css` hoặc `dashboard.js`, dừng m
 
 Nếu Wokwi Terminal chỉ hiển thị log, có thể dùng [Serial forwarding RFC2217](https://docs.wokwi.com/vscode/project-config#serial-port-forwarding) qua cổng 4000 đã có trong `wokwi.toml`. Kết nối Serial này phục vụ chẩn đoán, không cần cho luồng RFID/Web chính. `netoff`/`neton` là lệnh local test của firmware; phải kiểm tra log xác nhận và availability trước khi kết luận mạng đã dừng/phục hồi.
 
-## Có cần venv không?
+## Dừng và làm tiếp trong một buổi
+
+Giữ terminal `npm.cmd start` chạy. Stop Simulation làm dashboard chuyển chờ thiết bị/dữ liệu cũ và chặn command. Start Simulator lại sẽ tự phục hồi khi nhận state trực tiếp; không cần F5. Sau khi tắt máy, chạy middleware một lần rồi bật Wokwi. Lỗi `port in use` thường do đã có một bản middleware chạy; mở Web kiểm tra trước khi khởi động thêm.
+
+Firmware tuần 8 gửi heartbeat mỗi 1 giây mô phỏng và nghỉ 5 ms trong loop, giảm tình trạng mô phỏng chậm khiến dữ liệu vượt freshness 12 giây PC. Khi thật sự không nhận heartbeat, Web vẫn chặn điều khiển. Máy ngủ hoặc Wokwi bị hệ điều hành tạm ngừng không thể giữ kết nối bằng phần mềm này.
+
+Để lưu quan sát 15 phút từ thư mục middleware, chọn một tên file mới:
+
+```powershell
+npm.cmd run observe -- --seconds=900 --output=../runtime/observation-01.jsonl
+```
+
+Công cụ chỉ đọc API, không quét thẻ hoặc gửi command. File `.summary.json` kèm theo ghi thời lượng PC, session, số mẫu sẵn sàng/lỗi và gap heartbeat. Nếu có gián đoạn, giữ log và phân tích trước khi kết luận chạy ổn định.
+
+## Có cần venv không? (công cụ Python tùy chọn)
 
 Luồng chính dùng PlatformIO và Node.js/npm, không cần tạo `.venv` của project. Python console trong `tools/` là công cụ chẩn đoán tùy chọn. Nếu dùng, tạo một môi trường ở gốc repo:
 

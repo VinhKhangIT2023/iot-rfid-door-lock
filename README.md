@@ -6,9 +6,11 @@ Mô hình khóa cửa RFID dùng **ESP32, MQTT, Node-RED và Web App**, mô ph�
 
 ## Demo
 
-<img src="docs/images/dashboard-current.png" alt="Dashboard mới gồm trạng thái cửa, điều khiển và theo dõi RFID" width="800">
+<img src="docs/images/demo-w8.jpg" alt="Wokwi servo mở và dashboard nhận trạng thái cửa từ bài kiểm thử tuần 8" width="800">
 
-Giao diện mới ngày 12/10/2026; ảnh chụp lúc chờ thiết bị, không dùng làm minh chứng quét thẻ. Xem [kết quả kiểm thử và các ảnh mô phỏng trước đó](docs/results.md).
+Ảnh kiểm thử thực ngày 13/10/2026: mở khóa từ Web, servo mở và dashboard hiển thị cửa OPEN hợp lệ. Xem [kết quả và phạm vi kiểm thử](docs/results.md).
+
+Tuần 8 đã build firmware, sửa lỗi idle, chạy 10 chu kỳ RFID đầy đủ, hai đợt cho mỗi cảnh báo và quan sát hơn 15 phút với 893/893 mẫu Online. Đã chạy thêm10 chu kỳ Web mở/đóng và RFID local khi ngắt mạng, chốt M4 nội bộ trong mô phỏng. Video báo cáo cuối/người chạy độc lập còn cần bổ sung. [Kết quả và phạm vi xác minh](docs/results.md#tích-hợp-tuần-8-ngày-13102026).
 
 ## Chức năng
 

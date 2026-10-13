@@ -13,6 +13,7 @@ struct Snapshot { char state[32]; bool doorOpen; bool lockout; uint32_t loopMaxU
 struct Command { char action[12]; uint32_t seq; uint32_t at; uint32_t epoch; };
 QueueHandle_t outgoing = nullptr, snapshots = nullptr, commands = nullptr;
 std::atomic<bool> online{false}, paused{false};
+std::atomic<bool> statePaused{false};
 std::atomic<uint32_t> epoch{0}, dropped{0};
 std::atomic<int> workerStage{0};
 WiFiClient socketClient;
@@ -75,7 +76,7 @@ void worker(void*) {
   workerStage = 1;
   WiFi.mode(WIFI_STA);
   workerStage = 2;
-  WiFi.begin(NetCfg::WIFI_SSID, NetCfg::WIFI_PASSWORD);
+  WiFi.begin(NetCfg::WIFI_SSID, NetCfg::WIFI_PASSWORD, NetCfg::WIFI_CHANNEL);
   workerStage = 3;
   Serial.println("[NET] WiFi started; waiting for IP");
   mqtt.setServer(NetCfg::HOST, NetCfg::PORT);
@@ -90,7 +91,7 @@ void worker(void*) {
   uint32_t wifiAttemptAt = millis();
   uint32_t publishedAt = millis() - NetCfg::HEARTBEAT_MS;
   Snapshot latest{};
-  bool haveSnapshot = false, wasPaused = false;
+  bool haveSnapshot = false, wasPaused = false, wasStatePaused = false;
   for (;;) {
     uint32_t now = millis();
     if (paused.load()) {
@@ -105,7 +106,7 @@ void worker(void*) {
       vTaskDelay(pdMS_TO_TICKS(20)); continue;
     }
     if (wasPaused) {
-      WiFi.begin(NetCfg::WIFI_SSID, NetCfg::WIFI_PASSWORD);
+      WiFi.begin(NetCfg::WIFI_SSID, NetCfg::WIFI_PASSWORD, NetCfg::WIFI_CHANNEL);
       wifiAttemptAt = now;
       attemptAt = now - NetCfg::RETRY_MS;
       wasPaused = false;
@@ -145,7 +146,10 @@ void worker(void*) {
                 incoming.doorOpen != latest.doorOpen || incoming.lockout != latest.lockout;
       latest = incoming; haveSnapshot = true;
     }
-    if (haveSnapshot && (changed || now - publishedAt >= NetCfg::HEARTBEAT_MS)) {
+    const bool suppressState = statePaused.load();
+    if (wasStatePaused && !suppressState) publishedAt = now - NetCfg::HEARTBEAT_MS;
+    wasStatePaused = suppressState;
+    if (!suppressState && haveSnapshot && (changed || now - publishedAt >= NetCfg::HEARTBEAT_MS)) {
       StaticJsonDocument<448> doc;
       doc["state"] = latest.state;
       doc["door"] = latest.doorOpen ? "OPEN" : "CLOSED";
@@ -160,6 +164,14 @@ void worker(void*) {
     Packet p{};
     if (xQueueReceive(outgoing, &p, 0) == pdTRUE) {
       char name[128]; topic(name, sizeof(name), p.suffix);
+      // The worker owns session. Stamp here, avoiding a cross-task char buffer race.
+      StaticJsonDocument<512> doc;
+      // Copy parsed strings: serializing back into p.body must not overwrite
+      // zero-copy pointers inside the document while it is being emitted.
+      if (deserializeJson(doc, static_cast<const char*>(p.body))) { dropped++; continue; }
+      doc["session"] = session;
+      if (measureJson(doc) >= sizeof(p.body)) { dropped++; continue; }
+      serializeJson(doc, p.body, sizeof(p.body));
       if (!mqtt.publish(name, p.body, false)) dropped++;
     }
     vTaskDelay(pdMS_TO_TICKS(10));
@@ -214,3 +226,7 @@ void networkReport() {
                 static_cast<int>(WiFi.status()), WiFi.localIP().toString().c_str(), online.load() ? "online" : "offline");
 }
 void networkPauseForTest(bool value) { paused = value; }
+void networkPauseStateForTest(bool value) {
+  statePaused = value;
+  Serial.printf("[NET] State publication %s (MQTT unchanged)\n", value ? "paused" : "resumed");
+}

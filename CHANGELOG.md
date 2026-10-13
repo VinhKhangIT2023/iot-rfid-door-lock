@@ -4,6 +4,13 @@
 
 Chỉ ghi thay đổi đã thực hiện. Project chưa có bản release được đánh số.
 
+## 13/10/2026 — Tích hợp tuần 8
+
+- Heartbeat firmware đổi từ 5s sang 1s mô phỏng, Wi-Fi chọn channel 6, loop nghỉ 5ms để giảm tải Wokwi. Freshness API giữ 12s PC và timer cửa giữ nguyên.
+- State trực tiếp hợp lệ xác nhận lại online, tránh cờ availability offline lưu cũ làm Web chờ mãi dù đã nhận heartbeat mới. Retained state vẫn không cấp quyền.
+- MQTT worker gắn session vào event/ACK khi publish. Thêm Serial-only stateoff/stateon để kiểm tra stale khi MQTT còn online.
+- Thêm 11 fixture tích hợp và công cụ observe chỉ đọc API để ghi mốc PC/uptime/kết nối. Các kết quả E2E được ghi riêng trong Results, không suy từ fixture.
+
 ## 12/10/2026 — Dashboard và theo dõi RFID
 
 - Thiết kế lại dashboard xanh đậm, minh họa cửa, trạng thái dễ đọc và ba tab Tổng quan/RFID/Kỹ thuật; hỗ trợ desktop/mobile.
