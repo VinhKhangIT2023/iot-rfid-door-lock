@@ -62,7 +62,7 @@ test('Generated HTTP view exposes RFID data, and generated HTML embeds local CSS
   const flows=JSON.parse(fs.readFileSync(path.join(__dirname,'flows.json'),'utf8'));
   const fn=new Function('msg','flow','global',flows.find(n=>n.id==='view').func),m=c.initial();
   event(m,'CARD_DENIED','uid=AABBCCDD fail=1/3');
-  const result=fn({},{get:()=>m},{get:()=>c});assert.equal(result.payload.rfid_counts.denied,1);
+  const result=fn({},{get:()=>m},require('./test_history_context'));assert.equal(result.payload.rfid_counts.denied,1);
   const html=flows.find(n=>n.id==='html').template;
   assert(html.includes('id="rfid-history"'));assert(html.includes('function renderRfid'));
   assert(html.includes('--navy:'));assert(!html.includes('<!-- APP_SCRIPT -->'));assert(!html.includes('<!-- APP_STYLES -->'));

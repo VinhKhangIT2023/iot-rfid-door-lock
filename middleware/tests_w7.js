@@ -146,7 +146,7 @@ test('Generated ingestion function logs telemetry and rule as separate rows', ()
   const nodes=JSON.parse(fs.readFileSync(path.join(__dirname,'flows.json'),'utf8'));
   const f=nodes.find(n=>n.id==='ingest'); const fn=new Function('msg','flow','global','node','env',f.func);
   let m=live(); const flow={get:()=>m,set:(_,value)=>{m=value;}};
-  const result=fn({topic:topic('event'),payload:JSON.stringify({evt:'LEFT_OPEN_WARN',state:'DOOR_OPEN_AUTH',session}),retain:false},flow,{get:()=>c},{warn:()=>{}},{});
+  const result=fn({topic:topic('event'),payload:JSON.stringify({evt:'LEFT_OPEN_WARN',state:'DOOR_OPEN_AUTH',session}),retain:false},flow,require('./test_history_context'),{warn:()=>{}},{});
   assert(Array.isArray(result[0])); assert.strictEqual(result[0].length,2);
   assert.strictEqual(JSON.parse(result[0][1].payload).rule_id,'R2');
   assert.strictEqual(result[1],null);
@@ -155,7 +155,7 @@ test('Generated R1 command function logs a blocked action without publishing', (
   const nodes=JSON.parse(fs.readFileSync(path.join(__dirname,'flows.json'),'utf8'));
   const f=nodes.find(n=>n.id==='command'); const fn=new Function('msg','flow','global','node','env',f.func);
   let m=live(); m.online=false; const request=event(m,'DOOR_FORCED','ALARM').request;
-  const result=fn(request,{get:()=>m,set:(_,v)=>{m=v;}},{get:()=>c},{warn:()=>{}},{});
+  const result=fn(request,{get:()=>m,set:(_,v)=>{m=v;}},require('./test_history_context'),{warn:()=>{}},{});
   assert.strictEqual(result[0],null); assert.strictEqual(JSON.parse(result[1].payload).outcome,'blocked');
 });
 

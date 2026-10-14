@@ -25,7 +25,7 @@ Telegram bổ sung kênh nhận thông báo từ middleware: **R1 — cửa mở
 - **R1:** chờ LOCKED/CLOSED, mở công tắc cửa khi chưa cấp quyền. Web tạo cảnh báo đỏ; Telegram nhận thông báo mở trái phép. Đóng cửa và chờ phục hồi trước bài tiếp theo.
 - **R2:** quét Blue, mở cửa trong cửa sổ 5 giây mô phỏng, giữ OPEN quá 15 giây mô phỏng. Web tạo lời nhắc vàng; Telegram nhận lời nhắc đóng cửa. Đóng cửa rồi mở hợp lệ ở đợt mới để kiểm tra lần tiếp theo.
 
-Chỉ rule trực tiếp đã xác minh session mới được gửi. Dữ liệu retained, sự kiện cũ, ACK và thao tác mở khóa thông thường không tạo tin Telegram. Hàng đợi giới hạn 16 yêu cầu, một yêu cầu đang gửi; bỏ tin quá 60 giây PC và chống gửi lại cùng rule. Không gửi bù lịch sử sau restart, không tự thử lại tin lỗi để tránh gửi trùng.
+Kênh cảnh báo trực tiếp chỉ gửi rule đã xác minh session. Dữ liệu retained, sự kiện cũ, ACK và thao tác mở khóa thông thường không tạo cảnh báo trực tiếp. Hàng đợi giới hạn 16 yêu cầu, một yêu cầu đang gửi; bỏ tin quá 60 giây PC và chống gửi lại cùng rule, không tự thử lại tin lỗi. Kênh [lịch sử gửi bù](offline-history.md) bổ sung riêng: bản tổng hợp quá khứ, outbox bền vững và retry khi lỗi; không kích hoạt lại cảnh báo/lệnh cũ.
 
 `enabled: false` tắt các thông báo tiếp theo mà không cần restart. Một yêu cầu đã gửi tới Telegram có thể hoàn thành. Middleware và mạng phải đang hoạt động; Stop Wokwi không tạo thêm cảnh báo cửa.
 

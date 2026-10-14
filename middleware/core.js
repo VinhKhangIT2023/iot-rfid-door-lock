@@ -67,10 +67,10 @@ function recordRuleAction(model, request, result, now) {
     observed_session:request.observed_session||null, session_source:'observed_state',
     trigger_time_utc:request.trigger_time_utc});
 }
-function ingest(model, topic, payload, retained, now) {
+function ingest(model, topic, payload, retained, now, receiptKnown=false) {
   if(typeof topic!=='string' || !topic.startsWith(BASE+'/')) return {error:'topic'};
   const suffix=topic.slice(BASE.length+1);
-  if (!['availability','state','event','ack','cmd'].includes(suffix)) return {error:'topic'};
+  if (!['availability','state','event','ack','cmd','history'].includes(suffix)) return {error:'topic'};
   let data;
   try { data=suffix==='availability'?String(payload):JSON.parse(String(payload)); }
   catch(e) { return {error:'invalid_json'}; }
@@ -80,6 +80,14 @@ function ingest(model, topic, payload, retained, now) {
   if(suffix==='ack' && (!data || Array.isArray(data) || typeof data!=='object' || !['executed','rejected','expired'].includes(data.result))) return {error:'ack_schema'};
   const row={time_utc:new Date(now).toISOString(),topic,retained:!!retained,data};
   model.history.push(row); model.history=model.history.slice(-200);
+  if(suffix==='history') {
+    const valid=require('./history_store').validEvent;
+    const reason=retained?'retained':!valid(data)||data.replayed!==true?'history_schema':
+      !model.state||!model.freshAt||now-model.freshAt>FRESHNESS_MS?'waiting_direct_state':
+      data.session!==model.state.session?'old_session':null;
+    if(reason)row.ignored_reason=reason;
+    return {row,request:null,rule:null,archive:!reason};
+  }
   if(suffix==='state' && !retained && model.state && data.session!==model.state.session &&
       (model.retiredSessions||[]).includes(data.session)) {
     row.ignored_reason='retired_session';return {row,request:null,rule:null};
@@ -92,6 +100,9 @@ function ingest(model, topic, payload, retained, now) {
       !model.state?'waiting_direct_state':
       data.session!==model.state.session?'old_session':null;
     if(reason) {row.ignored_reason=reason;return {row,request:null,rule:null};}
+    if(suffix==='event'&&receiptKnown&&require('./history_store').validEvent(data)){
+      row.ignored_reason='event_duplicate';return {row,request:null,rule:null};
+    }
   }
   recordRfid(model,row);
   let request=null, rule=null;

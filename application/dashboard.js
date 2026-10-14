@@ -1,7 +1,7 @@
 'use strict';
 const el=id=>document.getElementById(id);
 let ready=false, sending=false, refreshing=false, latest=null, pending=null;
-const pages=['overview','rfid','technical'];
+const pages=['overview','rfid','journal','technical'];
 const timeFormat=new Intl.DateTimeFormat('vi-VN',{hour:'2-digit',minute:'2-digit',second:'2-digit',timeZone:'Asia/Bangkok'});
 const dateFormat=new Intl.DateTimeFormat('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',timeZone:'Asia/Bangkok'});
 const stateLabels={
@@ -34,7 +34,7 @@ function empty(container,title,description,iconName='card'){
 function selectPage(name,focus=false){
   if(!pages.includes(name))return;
   for(const page of pages){const active=page===name;el('page-'+page).hidden=!active;const tab=el('tab-'+page);tab.classList.toggle('active',active);tab.setAttribute('aria-selected',String(active));tab.tabIndex=active?0:-1;}
-  el('page-label').textContent={overview:'Tổng quan',rfid:'Hoạt động RFID',technical:'Thông tin kỹ thuật'}[name];
+  el('page-label').textContent={overview:'Tổng quan',rfid:'Hoạt động RFID',journal:'Lịch sử cửa',technical:'Thông tin kỹ thuật'}[name];
   if(focus)el('tab-'+name).focus();
 }
 function lockButtons(){
@@ -160,12 +160,28 @@ async function refresh(){
     const response=await fetch('/api/door',{cache:'no-store',signal:AbortSignal.timeout(6000)});
     if(!response.ok)throw Error('http');
     const d=await response.json();latest=d;
-    renderConnection(d);renderRfid(d);renderAlerts(d);renderAck(d);renderHistory(d);
+    renderConnection(d);renderRfid(d);renderAlerts(d);renderAck(d);renderHistory(d);renderJournal(d);
     el('updated').textContent='Cập nhật '+stamp(new Date().toISOString())+' · UTC+7';
   }catch(error){
     renderConnection({...latest,ready:false,connection:'app_offline',age_ms:null});
     el('updated').textContent='Chưa kết nối ứng dụng';
   }finally{refreshing=false;}
+}
+const journalLabels={UNLOCK_GRANTED:'Cấp quyền mở khóa',CARD_DENIED:'Thẻ bị từ chối',CARD_IGNORED_LOCKOUT:'Thẻ bị bỏ qua',LOCKOUT_START:'Bắt đầu khóa tạm',LOCKOUT_END:'Kết thúc khóa tạm',DOOR_FORCED:'R1 · Mở trái phép',DOOR_OPENED:'Cửa mở hợp lệ',DOOR_REOPENED:'Cửa mở lại',DOOR_CLOSED:'Đóng cửa',RELOCKED:'Khóa lại',LEFT_OPEN_WARN:'R2 · Nhắc đóng cửa',ALARM_MUTED:'Còi ngừng phát',ALARM_CLEARED:'Phục hồi báo động',BOOT_DOOR_OPEN:'Cửa mở lúc khởi động',CMD_UNKNOWN:'Lệnh local không hỗ trợ'};
+function renderJournal(d=latest||{}){
+  const journal=d.event_journal||{},rows=journal.events||[],query=el('journal-search').value.trim().toLowerCase(),filter=el('journal-filter').value;
+  const matches=rows.filter(r=>(filter==='all'||(filter==='historical'?r.historical:filter==='offline'?r.data.offline:!r.historical))&&(!query||(r.data.evt+' '+r.data.detail+' '+(journalLabels[r.data.evt]||'')).toLowerCase().includes(query)));
+  el('journal-status').textContent=journal.ok===false?'Nhật ký middleware lỗi; thiết bị chưa được xác nhận để xóa sự kiện.':
+    'Đã lưu '+(journal.total||0)+' sự kiện. '+(d.ready&&Number.isInteger(d.state?.journal_pending)?'Thiết bị còn '+d.state.journal_pending+' sự kiện chờ đồng bộ; bộ nhớ bền vững '+d.state.journal_capacity+' sự kiện. '+(d.state.journal_ok===false?'Bộ nhớ thiết bị đang báo lỗi.':''):'Chờ trạng thái trực tiếp để xác nhận hàng đợi thiết bị.');
+  const body=el('journal-history');body.replaceChildren();
+  for(const r of matches.slice().reverse()){
+    const tr=node('tr'),when=node('td'),what=node('td'),source=node('td'),detail=node('td');
+    when.append(node('span',r.event_time_utc?stamp(r.event_time_utc,true):'Sau khởi động '+(r.data.uptime_ms/1000).toFixed(1)+'s'),node('small',r.event_time_utc?'Giờ thiết bị · UTC+7':'Chưa đồng bộ giờ · boot '+r.data.boot_id),node('small','Nhận '+stamp(r.time_utc,true)));
+    what.append(node('b',journalLabels[r.data.evt]||r.data.evt));
+    source.append(pill(r.historical?(r.data.offline?'Offline · gửi bù':'Gửi bù'):'Trực tiếp',r.historical?'warning':'success'));
+    detail.append(node('span',r.data.detail||'—'),node('small','ID '+r.event_id));tr.append(when,what,source,detail);body.append(tr);
+  }
+  el('journal-empty').hidden=matches.length>0;el('journal-empty').textContent=rows.length?'Không có sự kiện khớp bộ lọc.':'Chưa có sự kiện được lưu.';
 }
 async function send(action){
   if(pending){notice('Đang chờ phản hồi cho lệnh trước.');return;}
@@ -189,6 +205,8 @@ for(const [index,page] of pages.entries()){
 el('show-rfid').onclick=()=>selectPage('rfid',true);
 el('rfid-search').addEventListener('input',()=>renderRfidTable());
 el('rfid-filter').addEventListener('change',()=>renderRfidTable());
+el('journal-search').addEventListener('input',()=>renderJournal());
+el('journal-filter').addEventListener('change',()=>renderJournal());
 el('token').addEventListener('input',lockButtons);
 el('status').onclick=()=>send('status');
 el('unlock').onclick=()=>el('unlock-dialog').showModal();

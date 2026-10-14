@@ -23,6 +23,7 @@ Tuần 9 (14/10/2026): chặn event/ACK khác phiên, đối chiếu ACK bằng 
 - **Web:** dashboard responsive với ba tab Tổng quan/RFID/Kỹ thuật; UID, kết quả quét thẻ, khóa tạm, tìm kiếm/lọc lịch sử; cảnh báo, status/unlock và hộp xác nhận.
 - **Middleware:** mã điều khiển cho API, kiểm tra online/freshness, chặn sử dụng state retained để cấp quyền, hai rule DOOR_FORCED/LEFT_OPEN_WARN và lịch sử xử lý từng rule.
 - **Telegram tùy chọn:** gửi cảnh báo R1/R2 vào cuộc trò chuyện riêng; cấu hình local, chống gửi lặp và ghi kết quả API. [Thiết lập và phạm vi](docs/telegram.md).
+- **Nhật ký Offline:** ESP32 giữ sự kiện trong NVS và gửi bù có xác nhận; tab Lịch sử cửa giữ nhật ký qua restart Web, Telegram gửi bản tổng hợp lịch sử. [Cơ chế và giới hạn](docs/offline-history.md).
 
 ## Hoạt động thế nào?
 
@@ -83,6 +84,8 @@ Nếu nhiều người chạy bản clone đồng thời, chọn topic BASE riê
 | [Results](docs/results.md) | Các tình huống đã chạy, ảnh Web, kết quả và giới hạn xác minh |
 | [Testing](docs/testing.md) | Test logic, kiểm thử mô phỏng và cách ghi kết quả |
 | [Telegram](docs/telegram.md) | Tạo bot, chọn Chat ID, gửi thử và nhận R1/R2 |
+| [Offline history](docs/offline-history.md) | Lưu NVS, gửi bù, lịch sử Web/Telegram và kết quả thực |
+| [Voice proposal](docs/voice-proposal.md) | Đề xuất giọng nói trên Web, chưa triển khai |
 | [Changelog](CHANGELOG.md) | Thay đổi đã thực hiện theo ngày |
 
 ## Cấu trúc project
@@ -106,7 +109,7 @@ CHANGELOG.md         Lịch sử thay đổi
 
 Bản hiện tại phát triển từ baseline tuần 6, bổ sung rule nhắc đóng cửa, lịch sử xử lý và dashboard theo dõi RFID ở tuần 7. Ngày 12/10/2026, **23/23 regression tuần 7, 8/8 bài logic dashboard và bộ middleware kế thừa đạt**. Buổi kiểm thử trước nâng cấp dashboard ghi nhận 7/7 bài P0 theo phạm vi logic/HTTP/Wokwi, hai đợt R1/R2 và offline/reconnect. Phạm vi kiểm tra giao diện mới được ghi riêng tại [Results](docs/results.md).
 
-Project phục vụ học tập/mô phỏng. Broker mặc định là công cộng, chưa có TLS/ACL; whitelist dựa trên UID. Chưa thử khóa cửa thật. Telegram gửi R1/R2 đã qua 13 bài giả lập và một đợt Wokwi thực cho mỗi rule; người dùng xác nhận nhận cả hai tin. Mở khóa bằng giọng nói và NVS/gửi bù chưa được triển khai.
+Project phục vụ học tập/mô phỏng. Broker mặc định là công cộng, chưa có TLS/ACL; whitelist dựa trên UID. Chưa thử khóa cửa thật. Telegram R1/R2 và lịch sử gửi bù đã được người dùng xác nhận nhận tin thực. Nhật ký NVS có giới hạn 24 bản ghi chưa ACK; xem phạm vi trong Offline history. Voice mới có đề xuất, chưa triển khai.
 
 ## Hướng phát triển
 

@@ -4,14 +4,21 @@
 #include <ArduinoJson.h>
 #include <atomic>
 #include <esp_system.h>
+#include <time.h>
+#include "event_journal.h"
 #include "network_config.h"
 #include "network_bridge.h"
 
 namespace {
-struct Packet { char suffix[12]; char body[448]; };
+struct Packet { char suffix[12]; char body[448]; uint32_t captureEpoch; bool offline; };
 struct Snapshot { char state[32]; bool doorOpen; bool lockout; uint32_t loopMaxUs; uint32_t uptime; };
 struct Command { char action[12]; uint32_t seq; uint32_t at; uint32_t epoch; };
 QueueHandle_t outgoing = nullptr, snapshots = nullptr, commands = nullptr;
+QueueHandle_t events = nullptr;
+EventJournal journal;
+char bootId[17]="";
+uint32_t eventSequence=0, journalSentAt=0;
+char awaitingId[32]="";
 std::atomic<bool> online{false}, paused{false};
 std::atomic<bool> statePaused{false};
 std::atomic<uint32_t> epoch{0}, dropped{0};
@@ -20,7 +27,7 @@ WiFiClient socketClient;
 PubSubClient mqtt(socketClient);
 char session[17] = "";
 uint32_t lastSeq = 0;
-char commandTopic[128], statusTopic[128], stateTopic[128];
+char commandTopic[128], statusTopic[128], stateTopic[128], historyAckTopic[128];
 
 void topic(char* out, size_t size, const char* suffix) {
   snprintf(out, size, "%s/%s", NetCfg::BASE, suffix);
@@ -44,6 +51,18 @@ void reject(const char* reason) {
 }
 
 void callback(char* incomingTopic, byte* payload, unsigned int length) {
+  if (strcmp(incomingTopic, historyAckTopic)==0) {
+    StaticJsonDocument<192> receipt;
+    if(length>180||deserializeJson(receipt,payload,length))return;
+    if(!receipt["session"].is<const char*>()||!receipt["event_id"].is<const char*>())return;
+    if(strcmp(receipt["session"],session)||strcmp(receipt["event_id"],awaitingId))return;
+    int head=journal.head();
+    if(head>=0&&journal.acknowledge(head)){
+      Serial.printf("[JOURNAL] ACK id=%s pending=%u\n",awaitingId,journal.count());
+      awaitingId[0]=0;journalSentAt=0;
+    }
+    return;
+  }
   if (strcmp(incomingTopic, commandTopic) != 0) return;
   if (length == 0 || length > 240) { reject("length"); return; }
   StaticJsonDocument<384> doc;
@@ -68,15 +87,19 @@ void callback(char* incomingTopic, byte* payload, unsigned int length) {
 void invalidate() {
   online = false;
   epoch++;
-  if (outgoing) xQueueReset(outgoing); // Week 4 does not replay offline history.
+  if (outgoing) xQueueReset(outgoing); // ACKs/commands expire; journal events survive.
   if (commands) xQueueReset(commands);
 }
 
 void worker(void*) {
+  journal.begin();
+  Serial.printf("[JOURNAL] NVS=%s pending=%u capacity=%u\n",journal.ok()?"ok":"error",journal.count(),EventJournal::Capacity);
+  Packet pendingEvent{};bool havePendingEvent=false;
   workerStage = 1;
   WiFi.mode(WIFI_STA);
   workerStage = 2;
   WiFi.begin(NetCfg::WIFI_SSID, NetCfg::WIFI_PASSWORD, NetCfg::WIFI_CHANNEL);
+  configTime(0,0,"pool.ntp.org","time.google.com");
   workerStage = 3;
   Serial.println("[NET] WiFi started; waiting for IP");
   mqtt.setServer(NetCfg::HOST, NetCfg::PORT);
@@ -87,6 +110,7 @@ void worker(void*) {
   topic(commandTopic, sizeof(commandTopic), "cmd");
   topic(statusTopic, sizeof(statusTopic), "availability");
   topic(stateTopic, sizeof(stateTopic), "state");
+  topic(historyAckTopic,sizeof(historyAckTopic),"history_ack");
   uint32_t attemptAt = millis() - NetCfg::RETRY_MS;
   uint32_t wifiAttemptAt = millis();
   uint32_t publishedAt = millis() - NetCfg::HEARTBEAT_MS;
@@ -94,6 +118,10 @@ void worker(void*) {
   bool haveSnapshot = false, wasPaused = false, wasStatePaused = false;
   for (;;) {
     uint32_t now = millis();
+    // Persist even while deliberately paused/offline. Keep the oldest pending
+    // packet in RAM when the bounded NVS journal is full; never erase history.
+    if(!havePendingEvent&&xQueueReceive(events,&pendingEvent,0)==pdTRUE)havePendingEvent=true;
+    if(havePendingEvent&&journal.count()<EventJournal::Capacity&&journal.append(pendingEvent.body,pendingEvent.captureEpoch,pendingEvent.offline))havePendingEvent=false;
     if (paused.load()) {
       if (!wasPaused) {
         invalidate();
@@ -128,7 +156,8 @@ void worker(void*) {
         // Blocking socket operations are confined to this worker, never the door loop.
         if (mqtt.connect(clientId, statusTopic, 1, true, "offline")) {
           epoch++;
-          if (!mqtt.subscribe(commandTopic, 1)) { mqtt.disconnect(); continue; }
+          if (!mqtt.subscribe(commandTopic, 1)||!mqtt.subscribe(historyAckTopic,1)) { mqtt.disconnect(); continue; }
+          awaitingId[0]=0;journalSentAt=0;
           online = true;
           mqtt.publish(statusTopic, "online", true);
           publishedAt = now - NetCfg::HEARTBEAT_MS;
@@ -158,6 +187,9 @@ void worker(void*) {
       doc["loop_max_us"] = latest.loopMaxUs;
       doc["session"] = session;
       doc["dropped"] = dropped.load();
+      doc["journal_pending"]=journal.count()+(havePendingEvent?1:0)+uxQueueMessagesWaiting(events);
+      doc["journal_capacity"]=EventJournal::Capacity;
+      doc["journal_ok"]=journal.ok();
       char body[448]; serializeJson(doc, body, sizeof(body));
       if (mqtt.publish(stateTopic, body, true)) publishedAt = now;
     }
@@ -174,25 +206,57 @@ void worker(void*) {
       serializeJson(doc, p.body, sizeof(p.body));
       if (!mqtt.publish(name, p.body, false)) dropped++;
     }
+    int head=journal.head();
+    if(head>=0&&haveSnapshot&&!suppressState&&(!awaitingId[0]||now-journalSentAt>=2000)){
+      const auto& record=journal.get(head);
+      const bool historical=record.history||journal.isRecovered(head)||record.captureEpoch!=epoch.load();
+      StaticJsonDocument<768> doc;
+      if(!deserializeJson(doc,static_cast<const char*>(record.body))){
+        // Persist the resend marker before transmission. A reboot/uncertain
+        // publish is replayed only on the history topic, never as a live alarm.
+        if(journal.markHistory(head)){
+          doc["session"]=session;
+          doc["replayed"]=historical;
+          char body[640],name[128];
+          serializeJson(doc,body,sizeof(body));
+          topic(name,sizeof(name),historical?"history":"event");
+          if(mqtt.publish(name,body,false)){
+            strlcpy(awaitingId,doc["event_id"]|"",sizeof(awaitingId));journalSentAt=now;
+            Serial.printf("[JOURNAL] TX %s id=%s pending=%u\n",historical?"history":"live",awaitingId,journal.count());
+          }
+        }
+      }
+    }
     vTaskDelay(pdMS_TO_TICKS(10));
   }
 }
 } // namespace
 
 void networkBegin() {
+  snprintf(bootId,sizeof(bootId),"%08lx%08lx",static_cast<unsigned long>(esp_random()),static_cast<unsigned long>(esp_random()));
   outgoing = xQueueCreate(16, sizeof(Packet));
   snapshots = xQueueCreate(1, sizeof(Snapshot));
   commands = xQueueCreate(8, sizeof(Command));
-  if (!outgoing || !snapshots || !commands) { Serial.println("[NET] Queue allocation failed; local mode only"); return; }
+  events=xQueueCreate(64,sizeof(Packet));
+  if (!outgoing || !snapshots || !commands||!events) { Serial.println("[NET] Queue allocation failed; local mode only"); return; }
   if (xTaskCreatePinnedToCore(worker, "mqtt-worker", 8192, nullptr, 1, nullptr, 0) != pdPASS)
     Serial.println("[NET] Task creation failed; local mode only");
 }
 
 void networkEvent(const char* event, const char* state, const char* detail) {
-  StaticJsonDocument<384> doc;
+  StaticJsonDocument<640> doc;
   doc["evt"] = event; doc["state"] = state;
   doc["detail"] = detail; doc["uptime_ms"] = millis();
-  enqueue("event", doc);
+  if(!events){dropped++;return;}
+  char id[32];snprintf(id,sizeof(id),"%s-%08lx",bootId,static_cast<unsigned long>(++eventSequence));
+  doc["event_id"]=id;doc["boot_id"]=bootId;
+  const bool offline=!online.load();doc["offline"]=offline;
+  time_t timestamp=time(nullptr);
+  if(timestamp>=1704067200)doc["event_time_ms"]=static_cast<uint64_t>(timestamp)*1000;
+  Packet p{};p.captureEpoch=epoch.load();p.offline=offline;
+  if(measureJson(doc)>=sizeof(p.body)){dropped++;return;}
+  serializeJson(doc,p.body,sizeof(p.body));
+  if(xQueueSend(events,&p,0)!=pdTRUE)dropped++;
 }
 
 void networkSnapshot(const char* state, bool doorOpen, bool lockout, uint32_t loopMaxUs) {

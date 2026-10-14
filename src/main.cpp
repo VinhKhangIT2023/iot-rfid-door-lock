@@ -372,6 +372,7 @@ void handleCommand(const char* cmd, Source src) {
   else if (src == Source::SERIAL_TEST && strcasecmp(cmd, "neton") == 0) networkPauseForTest(false);
   else if (src == Source::SERIAL_TEST && strcasecmp(cmd, "stateoff") == 0) networkPauseStateForTest(true);
   else if (src == Source::SERIAL_TEST && strcasecmp(cmd, "stateon") == 0) networkPauseStateForTest(false);
+  else if (src == Source::SERIAL_TEST && strcasecmp(cmd, "reboot") == 0) { Serial.println("[TEST] Software reboot; saved journal survives"); ESP.restart(); }
   else                                        logEvent("CMD_UNKNOWN", cmd);
 }
 
