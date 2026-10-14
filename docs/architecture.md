@@ -27,7 +27,7 @@ HTTP có `GET /api/door` để đọc dữ liệu và `POST /api/command` để 
 | R1 | DOOR_FORCED trực tiếp tạo cảnh báo đỏ và một yêu cầu status qua cổng gửi chung. Ghi status sent/blocked, seq hoặc lý do. Không tự thử lại yêu cầu bị chặn | State trực tiếp ngoài ALARM hoặc session trực tiếp mới |
 | R2 | LEFT_OPEN_WARN trực tiếp với state DOOR_OPEN_AUTH, đã quan sát state trực tiếp DOOR_OPEN_AUTH/OPEN, tạo lời nhắc vàng. Không tạo status/unlock, không chuyển state sang ALARM | DOOR_CLOSED trực tiếp, state trực tiếp CLOSED hoặc session trực tiếp mới |
 
-Cờ hai rule độc lập; mỗi đợt tạo một cảnh báo. Retained không tạo cảnh báo hoặc reset cờ. R2 kiểm tra state trực tiếp tương thích, không áp dụng thêm ranh giới freshness 12 giây như cổng gửi command. Firmware tuần 8 thêm session vào event. `observed_session` trong rule log vẫn lấy từ state đã quan sát; khi phân tích reconnect cần đối chiếu session gốc trong MQTT row.
+Cờ hai rule độc lập; mỗi đợt tạo một cảnh báo. Retained không tạo cảnh báo hoặc reset cờ. R2 kiểm tra state trực tiếp tương thích, không áp dụng thêm ranh giới freshness 12 giây như cổng gửi command. Firmware tuần 8 thêm session vào event. Từ tuần 9, event/ACK chỉ tác động model khi không retained và session hợp lệ khớp state trực tiếp đã quan sát. Rule/RFID ghi thêm `event_session` và `session_verified`; bản tin không đạt chỉ giữ trong raw history với `ignored_reason`. Event đến trước state không được phát lại. State trực tiếp từ một trong 32 phiên đã nghỉ gần nhất cũng bị bỏ qua; danh sách này chỉ tồn tại trong bộ nhớ, không phải xác thực broker.
 
 API `/api/door` có `rule_history`. File JSONL ghi MQTT row, `rule` và `rule_action`; bộ nhớ giữ tối đa 200 MQTT rows, 200 rule rows, 50 alerts. Restart middleware xóa bộ nhớ/cờ, file log vẫn ghi nối tiếp. ACK tuần 8 chứa seq/result/state/uptime/session, chưa có action; đối chiếu seq và session với command trong lượt chạy.
 
@@ -39,7 +39,7 @@ API bổ sung `connection` (`ready`, `broker_offline`, `device_offline`, `waitin
 
 RFID chỉ được tính từ event trực tiếp: `UNLOCK_GRANTED` có `src=RFID` và UID hợp lệ, `CARD_DENIED`, `CARD_IGNORED_LOCKOUT`. `LOCKOUT_START/END` ghi hoạt động nhưng không tăng số lượt quét. Mở khóa REMOTE/SERIAL và event retained không tăng thống kê. Bộ nhớ giữ 100 sự kiện RFID riêng, không bị heartbeat đẩy mất; số lượt tính từ khi middleware khởi động, giữ qua reconnect nhưng xóa khi restart.
 
-Khóa tạm hiện tại dựa vào `state.lockout` còn mới; lịch sử không được dùng để suy ra trạng thái hiện tại. RFID history ghi observed_session từ state, còn event thô tuần 8 có session do worker gắn khi publish. Web không quét thẻ hoặc thay đổi whitelist. Khi gửi lệnh, Web chờ ACK khớp seq, tạm khóa nút tránh gửi lặp và không tự gửi lại nếu chưa có ACK sau 20 giây máy tính.
+Khóa tạm hiện tại dựa vào `state.lockout` còn mới; lịch sử không được dùng để suy ra trạng thái hiện tại. RFID history ghi observed_session từ state, còn event thô tuần 8 có session do worker gắn khi publish. Web không quét thẻ hoặc thay đổi whitelist. Khi gửi lệnh, Web chờ ACK khớp cả seq và session của lệnh và state hiện tại, tạm khóa nút tránh gửi lặp và không tự gửi lại nếu chưa có ACK sau 20 giây máy tính.
 
 ## Mạch mô phỏng
 
@@ -67,8 +67,16 @@ Ngưỡng timer và whitelist nằm trong [main.cpp](../src/main.cpp).
 
 ## Thông số hiện tại
 
-Whitelist và timer nằm trong `src/main.cpp`: debounce 50 ms, cooldown thẻ 1500 ms, cảnh báo mở lâu 15000 ms, giới hạn âm báo động 10000 ms. Ba lần quét sai trong cửa sổ 30000 ms gây khóa tạm RFID 10000 ms. Timer firmware dùng thời gian mô phỏng; freshness middleware dùng thời gian máy tính.
+Whitelist và timer nằm trong `src/main.cpp`: debounce 50 ms, cooldown thẻ 1500 ms, cảnh báo mở lâu 15000 ms, giới hạn âm báo động 10000 ms. Ba lần quét sai liên tiếp gây khóa tạm RFID 10000 ms; bộ đếm sai được reset khi khoảng cách từ lần sai gần nhất đạt 30000 ms hoặc khi nhận thẻ hợp lệ. Đây là khoảng cách giữa các lần sai, không phải cửa sổ tổng 30 giây. Khóa tạm chỉ chặn RFID; REMOTE/Serial vẫn có thể cấp quyền theo chính sách hiện tại. Timer firmware dùng thời gian mô phỏng; freshness middleware dùng thời gian máy tính.
 
 Nếu đổi BASE/broker hoặc sửa Web/flow, xem [cách cài và chạy](getting-started.md).
 
 Tuần 8: heartbeat 1000 ms mô phỏng, snapshot 100 ms, loop nghỉ 5 ms để giảm tải Wokwi. loop_max_us đo phần xử lý, không cộng thời gian nghỉ. Wi-Fi dùng channel 6. Serial-only stateoff/stateon dừng/khôi phục state để kiểm tra stale khi MQTT vẫn kết nối; không phải command Web. `middleware/observe.js` chỉ đọc API và lưu kết nối/PC time/uptime, không điều khiển mô hình.
+
+## Kiểm soát phiên và body HTTP (tuần 9)
+
+State trực tiếp của phiên mới xóa ACK cũ và reset cờ rule/sequence. HTTP 202 trả cả session và seq. Web hủy lệnh đang chờ khi quan sát thiết bị đổi phiên; không tự gửi lại. Event/ACK của firmware tuần 6–7 không có session nên chỉ vào raw history; cần build firmware hiện tại (từ tuần 8).
+
+`http_guard.js` chạy trước bộ parser chung của Node-RED cho POST `/api/command`. Chấp nhận JSON object tối đa 2 KiB: JSON sai trả 400 `invalid_json`, array trả 400 `command_schema`, body quá lớn trả 413 `payload_too_large`, Content-Type khác application/json trả 415 `content_type`. Sau parse, sai mã trả 403; action sai hoặc offline/stale trả 409; lệnh hợp lệ trả 202. Các GET không đi qua guard này. `body-parser@1.20.8` được khai báo trực tiếp và khóa bằng lockfile, là phiên bản đã có trong cây dependency.
+
+Session/seq hạn chế nhầm phiên và lặp lệnh; không thay thế TLS/ACL. Bearer code bảo vệ API local, không bảo vệ topic MQTT công cộng.

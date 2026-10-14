@@ -9,7 +9,7 @@ assert(c.command(m,'lock',now).error,'unknown blocked');
 c.ingest(m,topic('availability'),'offline',false,now);assert(c.command(m,'unlock',now).error);
 c.ingest(m,topic('availability'),'online',false,now);assert(c.command(m,'unlock',now).error,'online alone insufficient');
 c.ingest(m,topic('state'),JSON.stringify(state),false,now);
-const force=JSON.stringify({evt:'DOOR_FORCED'});assert(c.ingest(m,topic('event'),force,false,now).request.action==='status');assert(!c.ingest(m,topic('event'),force,false,now).request);
+const force=JSON.stringify({evt:'DOOR_FORCED',session:state.session});assert(c.ingest(m,topic('event'),force,false,now).request.action==='status');assert(!c.ingest(m,topic('event'),force,false,now).request);
 assert.strictEqual(m.alerts.length,1);assert(!c.ingest(m,topic('event'),force,true,now).request);
 c.ingest(m,topic('state'),JSON.stringify(state),false,now);assert(c.ingest(m,topic('event'),force,false,now).request);
 m.broker=false;assert(c.command(m,'unlock',now).error);

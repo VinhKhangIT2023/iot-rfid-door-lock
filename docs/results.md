@@ -117,5 +117,30 @@ M4 đạt nội bộ trong phạm vi mô phỏng, P0 kỹ thuật hoàn tất. C
 
 ## Phần chưa triển khai hoặc chưa có kết quả
 
-Telegram, mở khóa bằng giọng nói, NVS/gửi bù và cấu hình broker TLS/ACL chưa được triển khai. Chưa thử khóa cửa thật hoặc hồi quy lockout/remote trực tiếp trên binary tuần 8. Event/ACK firmware đã có session; trường observed_session trong rule log vẫn lấy state gần nhất. Chưa có video/ghi âm.
+Telegram, mở khóa bằng giọng nói, NVS/gửi bù và cấu hình broker TLS/ACL chưa được triển khai. Chưa thử khóa cửa thật. Lockout/remote đã được hồi quy bằng log/API trực tiếp ngày 14/10/2026 như mục tuần 9 bên dưới. Chưa có video/ghi âm.
 
+## Kiểm thử hệ thống tuần 9 — 14/10/2026
+
+Sửa các nhánh event/ACK khác phiên làm nhiễm thống kê RFID, cảnh báo hoặc xác nhận lệnh. Session của event được đối chiếu với state trực tiếp; giữ raw row bị bỏ qua để truy vết. Web yêu cầu ACK khớp seq/session và hủy pending khi thiết bị đổi phiên. Sửa POST JSON lỗi từng trả 500 thành lỗi client 400/413/415. Launcher in đúng host/port cấu hình.
+
+| Kiểm tra | Kết quả thực và giới hạn |
+|---|---|
+| Logic | Bộ kế thừa và 23 W7 + 8 dashboard + 11 W8 + 14 W9 + 6 HTTP đều đạt; fixture không thay Wokwi |
+| HTTP thật | Sai mã 403; action/offline/stale 409; JSON/array 400; quá lớn 413; Content-Type sai 415; status/unlock 202 và ACK đúng session/seq |
+| MQTT thật | Firmware từ chối phiên sai, sequence lặp, action sai, JSON và schema sai; không publish state/event giả |
+| RFID/R2 | Người dùng quét Blue; mở sau 4640 ms, nhắc sau 15001 ms từ DOOR_OPENED; đóng→khóa 5005 ms |
+| Lockout | Red ba lần bị từ chối; Blue bị bỏ qua trong khóa tạm. REMOTE hợp lệ vẫn được cấp quyền/ACK; khóa tạm chỉ áp dụng RFID |
+| R1 | Hai DOOR_FORCED và hai R1 trong log lượt quan sát, R1 gửi status; đợt cuối đóng→ALARM_CLEARED |
+| Mạng | Stale trong khi MQTT online bị 409; netoff bị 409; Serial unlock local tự khóa khi offline; neton phiên mới có ACK |
+| Số đo offline | loop_max_us 2606 µs sau resetstat; chỉ phần xử lý, không gồm nghỉ loop, không đại diện mọi tình huống |
+| Bản sạch | Cài 277 package theo lockfile, test, build ESP32 SUCCESS và Web/API cùng máy; BASE/port riêng, chưa thử Wokwi ở bản sạch |
+
+Firmware và timer giữ nguyên so với bản tuần 8; kế thừa minh chứng actuator của bản đó, không ghi lượt tuần 9 là đã chụp/đo servo hoặc âm còi. Chênh timestamp LOCKOUT_START→END là 9997 ms, còn timer source là 10000 ms: mốc bắt đầu timer lấy trước các lần log, mỗi event lấy millis riêng nên chênh event không đo trực tiếp ranh giới timer. Bộ đếm dropped=2 được giữ trong evidence; hệ thống chưa lưu/gửi bù sự kiện offline.
+
+Đã hoàn thiện tài liệu kỹ thuật/source/flow bản ứng viên tuần 9. Video demo draft và người khác chạy bản sạch chưa có minh chứng. Word/PPTX và nghiệm thu tuần 10 chờ yêu cầu của người dùng; chưa phát hành release/tag.
+
+## Bổ sung kiểm tra bản sạch trên máy hiện tại (14/10/2026)
+
+Đã cài từ ZIP source không caches/token, npm ci 277 package, build sạch SUCCESS 19.06 s và chạy binary đó trên Wokwi (source/diagram đối chiếu giống main). Web của bản sạch chạy cùng máy trên 1880 khi Web main đã dừng, một controller. Blue cấp quyền, Yellow55667788 bị từ chối/ba lần sai gây lockout; R1 và R2 hiện thật, có ảnh servo OPEN. Status/unlock bấm trên Edge có ACK đúng session/seq; ba tab, tìm/lọc RFID, mã sai, hủy mở khóa và mobile 390×844 được kiểm tra. HTTP/mạng/stale/offline/reconnect/Stop-Start/restart-retained đúng; không phát telemetry giả. 1151 state trực tiếp trong 1149.359s trước cố ý ngắt mạng, gap lớn nhất 1248 ms; đây là thống kê raw heartbeat, không phải số mẫu API Online.
+
+Sửa thêm nhãn select RFID tách khỏi option text và launcher preflight cổng/mã trống; các 62 fixture cùng bộ kế thừa đều đạt sau sửa. Khôi phục main firmware đúng baseline/hash, giữ Web chính chạy nền và dọn bản tạm. Chạy sạch cùng máy đã hoàn tất theo yêu cầu; người khác chạy là kiểm chứng bổ sung. Video chưa có. Không bổ sung10+10 chu kỳ hoặc Blue ignored mới trong lượt sạch; phạm vi lịch sử ở các mục trước giữ nguyên.

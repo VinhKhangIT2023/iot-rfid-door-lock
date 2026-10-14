@@ -44,6 +44,10 @@ function lockButtons(){
 function notice(text,tone=''){el('notice').textContent=text;el('notice').className='command-notice'+(tone?' '+tone:'');}
 function renderConnection(d){
   ready=!!d.ready;
+  if(pending && d.state?.session && d.state.session!==pending.session) {
+    pending=null;
+    notice('Phiên thiết bị đã thay đổi. Kiểm tra trạng thái trước khi gửi lại lệnh.','error');
+  }
   const status={
     ready:['Thiết bị trực tuyến','success','Online','Đang nhận trạng thái mới'],
     broker_offline:['Chưa kết nối MQTT','neutral','Mất kết nối MQTT','Đang chờ middleware nối broker'],
@@ -135,7 +139,7 @@ function renderAck(d){
   const labels={executed:'Thiết bị đã xử lý lệnh',rejected:'Thiết bị từ chối lệnh',expired:'Lệnh đã hết hạn'};
   el('ack-summary').textContent=ack?(labels[ack.result]||'Đã nhận phản hồi thiết bị')+(ack.seq!==undefined?' · seq '+ack.seq:''):'Chưa có phản hồi từ thiết bị';
   el('ack-time').textContent=ack?.received_at?stamp(ack.received_at,true)+' · UTC+7':'';
-  if(pending&&ack?.seq===pending.seq){
+  if(pending&&ack?.seq===pending.seq&&ack?.session===pending.session&&d.state?.session===pending.session){
     notice(ack.result==='executed'?'Thiết bị đã xử lý lệnh '+(pending.action==='unlock'?'mở khóa':'đọc trạng thái')+'.':labels[ack.result]||'Thiết bị trả phản hồi chưa xác định.',ack.result==='executed'?'success':'error');pending=null;
   }else if(pending&&Date.now()-pending.started>20000){notice('Chưa nhận ACK khớp lệnh đã gửi. Kiểm tra thiết bị; hệ thống không tự gửi lại.','error');pending=null;}
   lockButtons();
@@ -145,6 +149,7 @@ function renderHistory(d){
   for(const row of history.slice(-20).reverse()){
     const tr=node('tr'),kind=node('td',row.topic.split('/').pop());
     if(row.retained)kind.append(node('small','retained','row-retained'));
+    if(row.ignored_reason)kind.append(node('small','Bỏ qua: '+row.ignored_reason,'row-retained'));
     tr.append(node('td',stamp(row.time_utc,true)),kind,node('td',JSON.stringify(row.data)));tbody.append(tr);
   }
   el('history-empty').hidden=history.length>0;
@@ -169,7 +174,7 @@ async function send(action){
   try{
     const response=await fetch('/api/command',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+el('token').value.trim()},body:JSON.stringify({action}),signal:AbortSignal.timeout(6000)});
     const result=await response.json();
-    if(response.ok){pending={seq:result.seq,action,started:Date.now()};notice('Đã gửi lệnh · seq '+result.seq+'. Đang chờ phản hồi thiết bị.');}
+    if(response.ok){pending={seq:result.seq,session:result.session,action,started:Date.now()};notice('Đã gửi lệnh · seq '+result.seq+'. Đang chờ phản hồi thiết bị.');}
     else{const message={forbidden:'Mã điều khiển không đúng.',offline_or_stale:'Thiết bị offline hoặc dữ liệu đã cũ.',action:'Lệnh không được hỗ trợ.'}[result.error]||'Ứng dụng chưa gửi được lệnh.';notice(message,'error');}
   }catch(error){notice('Chưa xác nhận được kết quả gửi lệnh. Kiểm tra kết nối trước khi thử lại.','error');}
   finally{sending=false;lockButtons();refresh();}

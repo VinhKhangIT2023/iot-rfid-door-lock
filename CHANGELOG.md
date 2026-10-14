@@ -4,6 +4,14 @@
 
 Chỉ ghi thay đổi đã thực hiện. Project chưa có bản release được đánh số.
 
+## 14/10/2026 — Kiểm thử hệ thống tuần 9
+
+- Event/ACK retained, thiếu session hoặc khác state trực tiếp chỉ được lưu raw, không thay RFID/rule/ACK; từ chối state của 32 phiên đã nghỉ gần nhất trong bộ nhớ.
+- Rule/RFID ghi event_session/session_verified. Phiên state mới xóa ACK cũ; HTTP 202 trả session, Web xác nhận cả seq/session và hủy pending khi đổi phiên.
+- POST command JSON lỗi trả 400, body lớn hơn 2 KiB trả 413, sai Content-Type trả 415. Khai báo trực tiếp body-parser 1.20.8 đã có trong dependency và đồng bộ lockfile.
+- Launcher in URL theo host/port settings. Thêm 14 test W9 và 6 test HTTP; cập nhật fixture cũ với session của firmware hiện tại.
+- Hồi quy HTTP/MQTT, stale/offline/reconnect và thao tác RFID/R1/R2 thực; cài/build/Web bản sạch cùng máy. Chuẩn hóa tài liệu; firmware và timer không thay đổi, video/người chạy độc lập còn thiếu.
+
 ## 13/10/2026 — Tích hợp tuần 8
 
 - Heartbeat firmware đổi từ 5s sang 1s mô phỏng, Wi-Fi chọn channel 6, loop nghỉ 5ms để giảm tải Wokwi. Freshness API giữ 12s PC và timer cửa giữ nguyên.
@@ -55,3 +63,9 @@ Test middleware và bản sao source độc lập tạo flow/test đã đạt. K
 - Đã có firmware RFID/state machine, kết nối MQTT, middleware và Web App.
 - Hồ sơ nhóm ghi nhận 8/8 bài mô phỏng đạt theo phạm vi từng bài.
 - Chi tiết tại [kết quả demo](docs/results.md).
+
+## 14/10/2026 — Bổ sung sau kiểm tra sạch thực
+
+- Tách label “Kết quả” khỏi các option để bộ lọc RFID có tên truy cập rõ; kiểm tra lại desktop/mobile.
+- Launcher thử bind cổng trước spawn: báo rõ nếu đang có Web, không khởi động bản thứ hai; báo mã local trống và lỗi spawn.
+- Cài/build/Wokwi/Web thực từ bản sạch trên cùng máy; kiểm tra giao diện, RFID/servo/rule, HTTP/mạng, Stop/Start và restart. Bộ kế thừa cùng 62 fixture đạt sau sửa; main được khôi phục và bản tạm đã dọn.

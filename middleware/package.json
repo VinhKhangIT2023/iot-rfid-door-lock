@@ -3,15 +3,18 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
-    "node-red": "^5.0.7"
+    "node-red": "^5.0.7",
+    "body-parser": "1.20.8"
   },
   "scripts": {
     "flow": "node generate_flow.js",
-    "test": "node tests.js && node tests_w7.js && node tests_dashboard.js && node tests_w8.js",
+    "test": "node tests.js && node tests_w7.js && node tests_dashboard.js && node tests_w8.js && node tests_w9.js && node tests_http_guard.js",
     "start": "node start.js",
     "test:w7": "node tests_w7.js",
     "test:dashboard": "node tests_dashboard.js",
     "test:w8": "node tests_w8.js",
-    "observe": "node observe.js"
+    "observe": "node observe.js",
+    "test:w9": "node tests_w9.js",
+    "test:http": "node tests_http_guard.js"
   }
 }

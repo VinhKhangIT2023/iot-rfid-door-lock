@@ -16,7 +16,7 @@ function live(door = 'OPEN', name = 'DOOR_OPEN_AUTH') {
   return model;
 }
 function event(model, evt = 'LEFT_OPEN_WARN', name = 'DOOR_OPEN_AUTH', at = now + 1, retained = false) {
-  return c.ingest(model, topic('event'), JSON.stringify({evt, state:name, uptime_ms:15001}), retained, at);
+  return c.ingest(model, topic('event'), JSON.stringify({evt, state:name, session:model.state?.session||session, uptime_ms:15001}), retained, at);
 }
 const cases = [];
 function test(name, run) { cases.push({name, run}); }
@@ -146,7 +146,7 @@ test('Generated ingestion function logs telemetry and rule as separate rows', ()
   const nodes=JSON.parse(fs.readFileSync(path.join(__dirname,'flows.json'),'utf8'));
   const f=nodes.find(n=>n.id==='ingest'); const fn=new Function('msg','flow','global','node','env',f.func);
   let m=live(); const flow={get:()=>m,set:(_,value)=>{m=value;}};
-  const result=fn({topic:topic('event'),payload:JSON.stringify({evt:'LEFT_OPEN_WARN',state:'DOOR_OPEN_AUTH'}),retain:false},flow,{get:()=>c},{warn:()=>{}},{});
+  const result=fn({topic:topic('event'),payload:JSON.stringify({evt:'LEFT_OPEN_WARN',state:'DOOR_OPEN_AUTH',session}),retain:false},flow,{get:()=>c},{warn:()=>{}},{});
   assert(Array.isArray(result[0])); assert.strictEqual(result[0].length,2);
   assert.strictEqual(JSON.parse(result[0][1].payload).rule_id,'R2');
   assert.strictEqual(result[1],null);

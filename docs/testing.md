@@ -44,3 +44,15 @@ R1: từ LOCKED/CLOSED gạt OPEN, kiểm tra DOOR_FORCED và cảnh báo đỏ.
 R2: quét thẻ hợp lệ, gạt OPEN trong cửa sổ cho phép và giữ quá 15000 ms mô phỏng. Đối chiếu uptime DOOR_OPENED/LEFT_OPEN_WARN, state DOOR_OPEN_AUTH, cảnh báo vàng và lịch sử R2. Kiểm tra không có command do R2 tạo. Giữ OPEN để kiểm tra không lặp, đóng/chờ LOCKED và chạy đợt thứ hai.
 
 Kiểm tra mã sai 403, netoff/mã đúng 409, neton/state mới khôi phục status/ACK. `netoff` chứng minh nhánh offline. Muốn chứng minh stale khi còn online phải ngừng riêng dữ liệu state trong khi giữ MQTT kết nối; bài logic freshness không thay thế phép thử này.
+
+## Hồi quy tuần 9 (14/10/2026)
+
+`npm test` chạy bộ kế thừa, 23 bài W7, 8 bài dashboard, 11 bài W8, 14 bài W9 và 6 bài parser HTTP. Chạy riêng bằng `npm run test:w9` hoặc `npm run test:http`. Bài W9 kiểm tra event/ACK khác phiên, retained, chưa có state, state của phiên đã nghỉ, provenance rule/RFID và các function ACK/pending thật của dashboard. Bài HTTP gửi request tới server fixture cô lập; không publish telemetry lên broker.
+
+Đã chạy lại HTTP/MQTT thật: 403/409/400/413/415; status/unlock 202 và ACK đúng session/seq; stale-online và netoff chặn 409; neton phiên mới phục hồi; firmware từ chối old_session, sequence lặp, action sai, JSON/schema sai. Người dùng thực hiện Blue→OPEN→R2→CLOSED→LOCKED, Red ba lần→Blue bị chặn, R1→đóng hết ALARM; middleware ghi rule/RFID có session đã đối chiếu. Đây là hồi quy log/API sau sửa, không có ảnh servo/ghi âm mới trong lượt W9.
+
+Bản sạch cùng máy: npm ci, mọi bộ test, PlatformIO build và Web/API trên BASE/port riêng đạt; bản tạm đã được dọn. Không tính là người khác chạy hoặc E2E actuator trên máy khác. Video draft chưa có. Evidence chi tiết nằm ngoài repo ở folder Tuan09; repo vẫn chạy độc lập từ README.
+
+## Kiểm tra sạch mở rộng
+
+Ngày14/10/2026 đã chạy bản sạch cùng máy với Wokwi/UI thực, có ảnh servo và kiểm thử desktop/mobile, bộ lọc, dialog, HTTP/mạng/Stop-Start/restart. source firmware/diagram đối chiếu main, bin build sạch nạp qua đường dẫn simulator rồi khôi phục main đúng hash. Thẻ sai trong lượt sạch là Yellow55667788; Blue ignored kế thừa lượt người dùng W9 trước, không claim đã quét Red hoặc làm10+10 vòng mới. Kiểm tra sạch cùng máy hoàn tất; độc lập người khác là bổ sung, video chưa có.

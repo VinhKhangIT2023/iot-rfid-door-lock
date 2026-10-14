@@ -12,6 +12,8 @@ Mô hình khóa cửa RFID dùng **ESP32, MQTT, Node-RED và Web App**, mô ph�
 
 Tuần 8 đã build firmware, sửa lỗi idle, chạy 10 chu kỳ RFID đầy đủ, hai đợt cho mỗi cảnh báo và quan sát hơn 15 phút với 893/893 mẫu Online. Đã chạy thêm10 chu kỳ Web mở/đóng và RFID local khi ngắt mạng, chốt M4 nội bộ trong mô phỏng. Video báo cáo cuối/người chạy độc lập còn cần bổ sung. [Kết quả và phạm vi xác minh](docs/results.md#tích-hợp-tuần-8-ngày-13102026).
 
+Tuần 9 (14/10/2026): chặn event/ACK khác phiên, đối chiếu ACK bằng seq/session, xử lý body HTTP lỗi và chuẩn hóa hướng dẫn. Bộ test kế thừa cùng 23 W7 + 8 dashboard + 11 W8 + 14 W9 + 6 HTTP đều đạt; đã hồi quy log/API RFID, khóa tạm và R1/R2 với thao tác Wokwi của người dùng. [Kết quả tuần 9](docs/results.md#kiểm-thử-hệ-thống-tuần-9--14102026).
+
 ## Chức năng
 
 - **RFID:** whitelist thẻ hợp lệ, chống đọc lặp và khóa tạm sau nhiều lần quét sai.
@@ -108,8 +110,9 @@ Project phục vụ học tập/mô phỏng. Broker mặc định là công cộ
 
 - [x] Bổ sung rule nhắc đóng cửa mở hợp lệ quá lâu và regression logic.
 - [x] Xác minh Wokwi cho hai rule, reset và hai đợt hoạt động.
-- [ ] Bổ sung lượt E2E lặp lại, kiểm tra stale khi vẫn online và tình huống mạng/khởi động lại.
-- [ ] Bổ sung ảnh hoặc video mô hình, video demo và kết quả chạy trên máy khác.
+- [x] E2E lặp lại, stale khi vẫn online, mất mạng/kết nối lại và khởi động lại; xem phạm vi trong Results.
+- [x] Bổ sung ảnh mô hình và kiểm tra cài/build/Web từ bản sạch cùng máy.
+- [ ] Video demo và kết quả một người khác chạy bản sạch.
 
 Chỉ đưa tính năng vào mục Chức năng khi đã triển khai; cập nhật kết quả kiểm thử và changelog khi có thay đổi thực tế.
 

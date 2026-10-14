@@ -4,7 +4,7 @@ const FRESHNESS_MS = 12000;
 function initial() {
   return {online:false, broker:false, state:null, freshAt:0, seq:0,
     alerts:[], history:[], ruleHistory:[], alarm:false, leftOpen:false,
-    rfidHistory:[], rfidCounts:{total:0,accepted:0,denied:0,ignored:0}};
+    rfidHistory:[], retiredSessions:[], rfidCounts:{total:0,accepted:0,denied:0,ignored:0}};
 }
 function recordRfid(model, row) {
   const data=row.data;
@@ -26,7 +26,8 @@ function recordRfid(model, row) {
     name:name?name[1]:null,attempt:attempts?Number(attempts[1]):null,
     attempt_limit:attempts?Number(attempts[2]):null,
     uptime_ms:Number.isFinite(data.uptime_ms)?data.uptime_ms:null,
-    observed_session:model.state?model.state.session:null,session_source:'observed_state'});
+    observed_session:model.state?model.state.session:null,session_source:'observed_state',
+    event_session:data.session,session_verified:true});
   model.rfidHistory=model.rfidHistory.slice(-100);
   if(['accepted','denied','ignored'].includes(outcome)) {
     model.rfidCounts.total++; model.rfidCounts[outcome]++;
@@ -49,12 +50,13 @@ function saveRule(model, row) {
 function ruleAlert(model, ruleId, kind, text, row) {
   const observedSession=model.state?model.state.session:null;
   model.alerts.push({time_utc:row.time_utc, rule_id:ruleId, kind, text,
-    observed_session:observedSession});
+    observed_session:observedSession,event_session:row.data.session,session_verified:true});
   model.alerts=model.alerts.slice(-50);
   return saveRule(model,{type:'rule', time_utc:row.time_utc, rule_id:ruleId,
     kind, outcome:'alert_created', source_event:row.data.evt,
     source_uptime_ms:Number.isFinite(row.data.uptime_ms)?row.data.uptime_ms:null,
-    observed_session:observedSession, session_source:'observed_state'});
+    observed_session:observedSession, session_source:'observed_state',
+    event_session:row.data.session,session_verified:true});
 }
 function recordRuleAction(model, request, result, now) {
   if(!request || request.source!=='rule-door-forced') return null;
@@ -75,15 +77,30 @@ function ingest(model, topic, payload, retained, now) {
   if(suffix==='availability' && !['online','offline'].includes(data)) return {error:'availability_schema'};
   if(suffix==='state' && (!data || !['LOCKED','UNLOCKED_WAIT_OPEN','DOOR_OPEN_AUTH','ALARM'].includes(data.state) || !/^[a-f0-9]{16}$/i.test(data.session||'') || !['OPEN','CLOSED'].includes(data.door))) return {error:'state_schema'};
   if(suffix==='event' && (!data || Array.isArray(data) || typeof data.evt!=='string' || !data.evt)) return {error:'event_schema'};
+  if(suffix==='ack' && (!data || Array.isArray(data) || typeof data!=='object' || !['executed','rejected','expired'].includes(data.result))) return {error:'ack_schema'};
   const row={time_utc:new Date(now).toISOString(),topic,retained:!!retained,data};
   model.history.push(row); model.history=model.history.slice(-200);
+  if(suffix==='state' && !retained && model.state && data.session!==model.state.session &&
+      (model.retiredSessions||[]).includes(data.session)) {
+    row.ignored_reason='retired_session';return {row,request:null,rule:null};
+  }
+  // Week 8+ firmware tags every event/ACK. Preserve rejected rows for audit,
+  // but never let a retained or different-session message affect live activity.
+  if(suffix==='event' || suffix==='ack') {
+    const reason=retained?'retained':
+      !/^[a-f0-9]{16}$/i.test(data.session||'')?'session_missing_or_invalid':
+      !model.state?'waiting_direct_state':
+      data.session!==model.state.session?'old_session':null;
+    if(reason) {row.ignored_reason=reason;return {row,request:null,rule:null};}
+  }
   recordRfid(model,row);
   let request=null, rule=null;
   if(suffix==='availability') { model.online=data==='online'; if(!model.online) model.freshAt=0; }
   if(suffix==='state') {
     if(!retained) {
       if(!model.state || model.state.session!==data.session) {
-        model.seq=0; model.alarm=false; model.leftOpen=false;
+        if(model.state)model.retiredSessions=[...(model.retiredSessions||[]),model.state.session].slice(-32);
+        model.seq=0; model.alarm=false; model.leftOpen=false; model.ack=null;
       }
       // A direct state proves the device is live. An old retained availability
       // or a previous simulator's delayed will must not keep it offline forever.

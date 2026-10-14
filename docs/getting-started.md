@@ -123,3 +123,15 @@ Trên macOS/Linux, dùng `python3 -m venv .venv` và `.venv/bin/python` thay đ�
 | HTTP 403 | Mã điều khiển không khớp file của middleware đang chạy |
 | HTTP 409 | Đọc `error` trong phản hồi: action không hỗ trợ hoặc thiết bị chưa sẵn sàng |
 | Cổng 1880 bị chiếm | Dừng Node-RED cũ; nếu đổi `uiPort` trong settings thì dùng URL mới |
+
+## Khi cập nhật bản tuần 9
+
+Dừng middleware cũ bằng Ctrl+C ở đúng terminal của nó, chạy `npm.cmd ci` (có thay đổi khai báo dependency/lockfile), `npm.cmd run flow`, `npm.cmd test`, rồi `npm.cmd start` và tải lại Web. Máy clone mới phải build firmware hiện tại để event/ACK có session; binary tuần 6–7 không đủ cho thống kê/rule trực tiếp mới. Phiên thiết bị mới sẽ xóa ACK cũ, Web hủy lệnh đang chờ; kiểm tra trạng thái trước khi gửi lại.
+
+API command cần Content-Type application/json và JSON object tối đa 2 KiB. HTTP 400/413/415 là lỗi body/định dạng, sửa request; không cần reset Wokwi. HTTP 202 chỉ là gửi lệnh; đối chiếu ACK đúng seq/session và quan sát actuator.
+
+Khóa tạm sau ba thẻ sai chỉ chặn RFID trong 10 giây mô phỏng. Web/Serial vẫn cấp quyền theo chính sách hiện tại khi đáp ứng điều kiện riêng. Không nhầm servo mở khóa với công tắc báo cánh cửa đã mở.
+
+### Khi npm start báo cổng đang được dùng
+
+Launcher hiện kiểm tra cổng trước khi khởi động Node-RED và in URL cần kiểm tra. Nếu đó là Web đang dùng, mở URL và dùng tiếp; không chạy thêm. Muốn restart, dừng đúng dịch vụ cũ trước. File operator_code.txt trống sẽ có thông báo riêng; điền mã local hợp lệ rồi chạy lại. Không cần sửa firewall hoặc xóa thư viện để xử lý hai tình huống này.

@@ -1,6 +1,9 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),c=require('./core');
 const now=1791810000000,topic=suffix=>c.BASE+'/'+suffix;
-const event=(m,evt,detail,retained=false,at=now)=>c.ingest(m,topic('event'),JSON.stringify({evt,detail,state:'LOCKED',uptime_ms:10}),retained,at);
+const event=(m,evt,detail,retained=false,at=now)=>{
+  if(!m.state)c.ingest(m,topic('state'),JSON.stringify({state:'LOCKED',door:'CLOSED',session:'0123456789abcdef'}),false,at);
+  return c.ingest(m,topic('event'),JSON.stringify({evt,detail,state:'LOCKED',session:m.state.session,uptime_ms:10}),retained,at);
+};
 const cases=[];
 const test=(name,run)=>cases.push({name,run});
 test('Actual RFID grant format yields UID/name; remote and serial unlocks are excluded',()=>{
@@ -38,7 +41,7 @@ test('Heartbeat traffic cannot evict RFID activity; dedicated history is bounded
   for(let i=0;i<120;i++)event(m,'CARD_DENIED','uid=AABBCCDD fail=1/3',false,now+250+i);
   assert.equal(m.rfidHistory.length,100);assert.equal(m.rfidCounts.total,121);
 });
-test('Session context is observed only; reconnect preserves monitoring history and counters',()=>{
+test('Session is verified against direct state; reconnect preserves monitoring history and counters',()=>{
   const m=c.initial(),state={state:'LOCKED',door:'CLOSED',lockout:false,session:'0123456789abcdef'};
   c.ingest(m,topic('state'),JSON.stringify(state),false,now);event(m,'CARD_DENIED','uid=AABBCCDD fail=1/3');
   assert.equal(m.rfidHistory[0].observed_session,state.session);assert.equal(m.rfidHistory[0].session_source,'observed_state');
