@@ -85,6 +85,8 @@ Nếu Wokwi Terminal chỉ hiển thị log, có thể dùng [Serial forwarding 
 
 ## Dừng và làm tiếp trong một buổi
 
+Có thể bật kênh [nhận cảnh báo Telegram R1/R2](telegram.md) sau khi Web chạy được. Bot chỉ gửi thông báo; cấu hình riêng được Git bỏ qua.
+
 Giữ terminal `npm.cmd start` chạy. Stop Simulation làm dashboard chuyển chờ thiết bị/dữ liệu cũ và chặn command. Start Simulator lại sẽ tự phục hồi khi nhận state trực tiếp; không cần F5. Sau khi tắt máy, chạy middleware một lần rồi bật Wokwi. Lỗi `port in use` thường do đã có một bản middleware chạy; mở Web kiểm tra trước khi khởi động thêm.
 
 Firmware tuần 8 gửi heartbeat mỗi 1 giây mô phỏng và nghỉ 5 ms trong loop, giảm tình trạng mô phỏng chậm khiến dữ liệu vượt freshness 12 giây PC. Khi thật sự không nhận heartbeat, Web vẫn chặn điều khiển. Máy ngủ hoặc Wokwi bị hệ điều hành tạm ngừng không thể giữ kết nối bằng phần mềm này.

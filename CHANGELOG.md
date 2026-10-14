@@ -4,6 +4,13 @@
 
 Chỉ ghi thay đổi đã thực hiện. Project chưa có bản release được đánh số.
 
+## 14/10/2026 — Kênh cảnh báo Telegram tùy chọn
+
+- Gửi R1/R2 đã xác minh phiên tới chat riêng; không thêm lệnh điều khiển cửa qua Telegram.
+- Cấu hình local được Git bỏ qua, template trống; công cụ init/chats/test. Không tự trả lời `/start`.
+- Hàng đợi giới hạn, chống lặp, bỏ tin cũ, timeout và log kết quả API không chứa token/Chat ID; không tự thử lại hoặc gửi bù.
+- 13/13 fixture Telegram và toàn bộ test kế thừa đạt. Một đợt R1 và một đợt R2 từ Wokwi thật được API nhận; người dùng xác nhận thấy cả hai tin. R2 phát sau 15003 ms mô phỏng, đóng cửa khóa lại sau 5004 ms.
+
 ## 14/10/2026 — Kiểm thử hệ thống tuần 9
 
 - Event/ACK retained, thiếu session hoặc khác state trực tiếp chỉ được lưu raw, không thay RFID/rule/ACK; từ chối state của 32 phiên đã nghỉ gần nhất trong bộ nhớ.

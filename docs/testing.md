@@ -56,3 +56,9 @@ Bản sạch cùng máy: npm ci, mọi bộ test, PlatformIO build và Web/API t
 ## Kiểm tra sạch mở rộng
 
 Ngày14/10/2026 đã chạy bản sạch cùng máy với Wokwi/UI thực, có ảnh servo và kiểm thử desktop/mobile, bộ lọc, dialog, HTTP/mạng/Stop-Start/restart. source firmware/diagram đối chiếu main, bin build sạch nạp qua đường dẫn simulator rồi khôi phục main đúng hash. Thẻ sai trong lượt sạch là Yellow55667788; Blue ignored kế thừa lượt người dùng W9 trước, không claim đã quét Red hoặc làm10+10 vòng mới. Kiểm tra sạch cùng máy hoàn tất; độc lập người khác là bổ sung, video chưa có.
+
+## Telegram
+
+`npm test` chạy thêm 13 fixture Telegram; `npm run test:telegram` chạy riêng, mọi request Telegram trong suite đều giả lập. Kiểm tra cấu hình tắt/sai, rule đúng phiên, chống lặp, hàng đợi, tin cũ, lỗi API, đóng node và wiring không thêm unlock. Không dùng token thật trong fixture.
+
+Lượt thực ngày 14/10/2026: người dùng nhận tin thử, R1 và R2 do thao tác Wokwi tạo; đối chiếu event→rule đúng session→telegram_delivery API nhận thành công. Mỗi rule một đợt, người dùng xác nhận thấy tin. Chưa kiểm tra mất mạng Telegram thực. [Cách thiết lập và thử lại](telegram.md).

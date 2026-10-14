@@ -16,6 +16,7 @@ middleware/flows_cred.json
 middleware/.config*
 middleware/context/
 middleware/operator_code.txt
+middleware/telegram.local.json
 tools/mqtt_log.jsonl
 *.log
 Thumbs.db
