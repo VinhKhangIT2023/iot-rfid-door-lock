@@ -139,3 +139,9 @@ Khóa tạm sau ba thẻ sai chỉ chặn RFID trong 10 giây mô phỏng. Web/S
 ### Khi npm start báo cổng đang được dùng
 
 Launcher hiện kiểm tra cổng trước khi khởi động Node-RED và in URL cần kiểm tra. Nếu đó là Web đang dùng, mở URL và dùng tiếp; không chạy thêm. Muốn restart, dừng đúng dịch vụ cũ trước. File operator_code.txt trống sẽ có thông báo riêng; điền mã local hợp lệ rồi chạy lại. Không cần sửa firewall hoặc xóa thư viện để xử lý hai tình huống này.
+
+### Khi cập nhật quản lý thẻ, lịch sử và voice
+
+Build firmware hiện tại, tạo lại flow rồi restart middleware; Ctrl+F5 trên Web. Firmware mới hỗ trợ quyền thẻ lưu NVS và snapshot cấu hình; binary cũ không đủ cho tab Quản lý thẻ. Không cần thêm dependency npm ngoài lockfile hiện có. Giữ runtime để giữ quyền mong muốn/lịch sử/lựa chọn thông báo Telegram; không commit các dữ liệu này.
+
+[Quản lý thẻ](card-management.md) · [Voice và kiểm tra micro](voice-proposal.md) · [Lịch sử/CSV](offline-history.md) · [Bot Telegram](telegram.md)

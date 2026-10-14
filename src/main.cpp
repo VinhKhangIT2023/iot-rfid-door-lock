@@ -10,6 +10,7 @@
 #include <ESP32Servo.h>
 #include <strings.h>
 #include "network_bridge.h"
+#include "access_policy.h"
 
 // ============================================================
 // KHOI A1 - PHAN CUNG (giu nguyen tu Tuan 2)
@@ -47,12 +48,7 @@ namespace Cfg {
 // ============================================================
 // KHOI A3 - DANH SACH THE HOP LE (whitelist)
 // ============================================================
-struct UidEntry { byte bytes[4]; const char* name; };
-const UidEntry WHITELIST[] = {
-  { {0x01, 0x02, 0x03, 0x04}, "blue"  },   // Blue Card preset cua Wokwi
-  { {0x11, 0x22, 0x33, 0x44}, "green" },   // Green Card preset cua Wokwi
-};
-constexpr size_t WHITELIST_SIZE = sizeof(WHITELIST) / sizeof(WHITELIST[0]);
+// Default Blue/Green and saved rights are owned by AccessPolicy/NVS.
 
 // ============================================================
 // KHOI A4 - KIEU DU LIEU + BIEN TRANG THAI
@@ -129,13 +125,6 @@ void uidToString(const byte* uid, byte size, char* out, size_t outLen) {
   }
 }
 
-const UidEntry* findUid(const byte* uid, byte size) {
-  if (size != 4) return nullptr;
-  for (size_t i = 0; i < WHITELIST_SIZE; i++) {
-    if (memcmp(uid, WHITELIST[i].bytes, 4) == 0) return &WHITELIST[i];
-  }
-  return nullptr;
-}
 
 // ============================================================
 // KHOI C - BUZZER KHONG CHAN (mau beep, khong dung delay)
@@ -229,7 +218,7 @@ void enterState(LockState s, unsigned long now) {
 void requestUnlock(Source src, const char* detail) {
   unsigned long now = millis();
   const char* srcName = (src == Source::RFID) ? "RFID" : (src == Source::SERIAL_TEST ? "SERIAL" : "REMOTE");
-  char msg[80];
+  char msg[160];
   snprintf(msg, sizeof(msg), "src=%s %s", srcName, detail);
   if (src == Source::RFID) failCount = 0;
   enterState(doorStable ? LockState::DOOR_OPEN_AUTH : LockState::UNLOCKED_WAIT_OPEN, now);
@@ -250,7 +239,7 @@ void handleCard(const byte* uid, byte size, unsigned long now) {
 
   char uidStr[24];
   uidToString(uid, size, uidStr, sizeof(uidStr));
-  char msg[64];
+  char msg[128];
 
   if (lockoutActive) {
     snprintf(msg, sizeof(msg), "uid=%s", uidStr);
@@ -258,9 +247,9 @@ void handleCard(const byte* uid, byte size, unsigned long now) {
     return;
   }
 
-  const UidEntry* e = findUid(uid, size);
-  if (e != nullptr) {
-    snprintf(msg, sizeof(msg), "uid=%s name=%s", uidStr, e->name);
+  const auto decision=AccessPolicy::authorize(uidStr,time(nullptr));
+  if (decision.allowed) {
+    snprintf(msg, sizeof(msg), "uid=%s name=%s", uidStr, decision.card->name);
     requestUnlock(Source::RFID, msg);
     return;
   }
@@ -268,7 +257,7 @@ void handleCard(const byte* uid, byte size, unsigned long now) {
   if (elapsed(now, lastFailAt, Cfg::FAIL_WINDOW_MS)) failCount = 0;
   failCount++;
   lastFailAt = now;
-  snprintf(msg, sizeof(msg), "uid=%s fail=%u/%u", uidStr, failCount, Cfg::FAIL_LIMIT);
+  snprintf(msg, sizeof(msg), "uid=%s reason=%s fail=%u/%u", uidStr, decision.reason, failCount, Cfg::FAIL_LIMIT);
   logEvent("CARD_DENIED", msg);
   if (state != LockState::ALARM) buzzerPlay(PAT_DENIED);
 
@@ -373,6 +362,7 @@ void handleCommand(const char* cmd, Source src) {
   else if (src == Source::SERIAL_TEST && strcasecmp(cmd, "stateoff") == 0) networkPauseStateForTest(true);
   else if (src == Source::SERIAL_TEST && strcasecmp(cmd, "stateon") == 0) networkPauseStateForTest(false);
   else if (src == Source::SERIAL_TEST && strcasecmp(cmd, "reboot") == 0) { Serial.println("[TEST] Software reboot; saved journal survives"); ESP.restart(); }
+  else if (src == Source::SERIAL_TEST && strcasecmp(cmd, "policytest") == 0) AccessPolicy::selfTest();
   else                                        logEvent("CMD_UNKNOWN", cmd);
 }
 
@@ -425,6 +415,7 @@ void loop() {
   unsigned long t0 = micros();
   unsigned long now = millis();
 
+  if(AccessPolicy::poll()){char detail[64];snprintf(detail,sizeof(detail),"revision=%llu",AccessPolicy::revision());logEvent("POLICY_APPLIED",detail);}
   bool doorChanged = doorUpdate(now);
   fsmUpdate(now, doorChanged);
   rfidPoll(now);

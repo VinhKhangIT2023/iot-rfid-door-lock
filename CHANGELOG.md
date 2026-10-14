@@ -4,13 +4,23 @@
 
 Chỉ ghi thay đổi đã thực hiện. Project chưa có bản release được đánh số.
 
+## 14/10/2026 — Quản lý thẻ, bot tương tác và điều khiển giọng nói
+
+- Thêm quản lý tối đa 8 thẻ trên Web; quyền ngày/giờ/hạn sử dụng lưu NVS, xác nhận lưu và áp dụng đúng phiên/revision; cần mã điều khiển và cấu hình trực tiếp trước khi sửa.
+- Telegram trả lời trạng thái/lịch sử/hướng dẫn bằng nút tiếng Việt hoặc lệnh; thêm thông báo mất/kết nối lại, có thể tạm tắt khi nghỉ. Diễn giải hoạt động bằng lời, bỏ log kỹ thuật khỏi tin người dùng.
+- Lịch sử tìm/lọc toàn bộ dữ liệu, phân trang, lọc ngày và xuất CSV. Ba nguồn Offline/gửi lại khi Online/trực tiếp không trùng nhau.
+- Thêm quyền lưu trú khách sạn liên tục từ 14:00 ngày nhận đến 12:00 ngày trả; chặn thiếu/ngược ngày, có bản xem trước.
+- Sửa menu và lịch đóng trước khi nhận cú bấm; nút × xóa ngày ở mọi lịch, chuyển tháng/năm bằng chuột và bàn phím; hỗ trợ chuột/bàn phím, lịch ngày riêng, giãn nhãn và ô nhập. Voice thành khung riêng, ô cửa gọn và hình cửa đặt giữa theo chiều cao.
+- Voice nhận kết quả cuối hoặc câu chuyển tab ổn định mà không cần bấm dừng; mở khóa vẫn xác nhận. Có thanh mức âm, báo lỗi/rỗng/timeout và tự nhả micro. Logic đạt; sau khi bật lại micro, người dùng xác nhận tự chuyển tab và hộp xác nhận mở khóa.
+- 24 fixture tính năng mới đạt, toàn bộ suite hồi quy đạt; firmware build và self-test chính sách 10/10. Các phạm vi thực và giới hạn được ghi riêng trong Results. Không làm thêm hồ sơ tuần 10.
+
 ## 14/10/2026 — Nhật ký Offline và gửi bù
 
 - Lưu event ở NVS ESP32 theo ID boot/sequence, chờ xác nhận middleware đã lưu/fsync trước khi xóa; queue giới hạn, báo pending/capacity/health/dropped.
 - Tách topic history/history_ack, chống lặp theo ID, giữ lịch sử qua restart Web; dữ liệu quá khứ không thay trạng thái hoặc kích hoạt rule/lệnh hiện tại.
 - Tab Lịch sử cửa có tìm kiếm/lọc, phân biệt giờ xảy ra và giờ nhận; Telegram gửi bản tổng hợp quá khứ với outbox bền vững và retry lỗi có giới hạn nhịp.
 - Bài Offline thực nhận đủ 9 sự kiện và người dùng thấy lịch sử Telegram; software reboot giữ/gửi lại 2 sự kiện NVS. Giới hạn Wokwi/watchdog và chưa thử mất điện phần cứng ghi trong Offline history.
-- Voice có đề xuất trên Web, chưa triển khai; không làm thêm hồ sơ tuần 10.
+- Tại mốc nhật ký Offline này, voice còn là đề xuất; xem bản triển khai và trạng thái mới ở mục phía trên.
 
 ## 14/10/2026 — Kênh cảnh báo Telegram tùy chọn
 

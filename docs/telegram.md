@@ -2,7 +2,7 @@
 
 [Về README](../README.md) · [Hướng dẫn chạy](getting-started.md)
 
-Telegram bổ sung kênh nhận thông báo từ middleware: **R1 — cửa mở trái phép**, **R2 — cửa mở hợp lệ quá 15 giây mô phỏng**. Firmware, timer và thao tác RFID giữ nguyên. Bot hiện chỉ gửi thông báo, chưa xử lý lệnh chat; gửi `/start` không có câu trả lời tự động.
+Telegram bổ sung kênh nhận thông báo từ middleware: **R1 — cửa mở trái phép**, **R2 — cửa mở hợp lệ quá 15 giây mô phỏng**. Firmware, timer và thao tác RFID giữ nguyên. Bot trả lời `/start`, `/help`, `/status`, `/history` trong cuộc trò chuyện riêng đã cấu hình. Bàn phím có nút tiếng Việt **Trạng thái cửa**, **Lịch sử cửa**, **Hướng dẫn**; nội dung mô tả hoạt động bằng lời dễ hiểu, không in event/session/ID hoặc dòng log gốc.
 
 ## Thiết lập lần đầu
 
@@ -27,6 +27,10 @@ Telegram bổ sung kênh nhận thông báo từ middleware: **R1 — cửa mở
 
 Kênh cảnh báo trực tiếp chỉ gửi rule đã xác minh session. Dữ liệu retained, sự kiện cũ, ACK và thao tác mở khóa thông thường không tạo cảnh báo trực tiếp. Hàng đợi giới hạn 16 yêu cầu, một yêu cầu đang gửi; bỏ tin quá 60 giây PC và chống gửi lại cùng rule, không tự thử lại tin lỗi. Kênh [lịch sử gửi bù](offline-history.md) bổ sung riêng: bản tổng hợp quá khứ, outbox bền vững và retry khi lỗi; không kích hoạt lại cảnh báo/lệnh cũ.
 
+Bot chỉ trả lời chủ sở hữu cuộc trò chuyện riêng đã cấu hình, bỏ qua lệnh cũ quá 5 phút; không có lệnh mở khóa từ Telegram. Không chạy `telegram:chats` đồng thời khi bot đang đọc lệnh để tránh tranh nhận cập nhật.
+
+Thiết bị từng sẵn sàng rồi mất dữ liệu liên tục quá 30 giây sẽ có một tin mất kết nối; có dữ liệu mới thì gửi một tin phục hồi. Khi chủ động nghỉ, tắt **Thông báo mất kết nối** ở tab Kỹ thuật và lưu bằng mã điều khiển. Lựa chọn được giữ qua restart Web. Stop Wokwi cũng có thể tạo thông báo này nếu chưa tắt.
+
 `enabled: false` tắt các thông báo tiếp theo mà không cần restart. Một yêu cầu đã gửi tới Telegram có thể hoàn thành. Middleware và mạng phải đang hoạt động; Stop Wokwi không tạo thêm cảnh báo cửa.
 
 ## Kết quả và xử lý lỗi
@@ -35,7 +39,7 @@ Log JSONL có hàng `telegram_delivery`: `api_accepted`, `failed`, `disabled`, `
 
 | Tình huống | Cách kiểm tra |
 |---|---|
-| `/start` không có trả lời | Bình thường với bot chỉ gửi thông báo; dùng `telegram:chats` và `telegram:test` |
+| `/start` không có trả lời | Kiểm tra enabled/Chat ID, middleware đang chạy và flow mới; gửi lại `/start` sau khi dịch vụ sẵn sàng |
 | Chưa thấy chat riêng | Kiểm tra đúng username bot, gửi `/start` mới rồi chạy lại |
 | Token/Chat ID không hợp lệ | Kiểm tra file local, không điền vào template public |
 | `telegram_401` | Token không được API chấp nhận |
@@ -52,3 +56,5 @@ Log JSONL có hàng `telegram_delivery`: `api_accepted`, `failed`, `disabled`, `
 | Đóng cửa sau R2 | Khóa lại sau 5004 ms mô phỏng, về LOCKED/CLOSED |
 
 Đây là một đợt thực cho mỗi rule trên máy hiện tại. Chống lặp, hàng đợi và lỗi API được kiểm tra thêm bằng fixture, không coi là các bài mất mạng Telegram thực.
+
+Ngày 14/10/2026, người dùng xác nhận bot trả lời cả `/status` và `/history`. Bản trình bày tiếng Việt mới đã được API nhận vào đúng cuộc trò chuyện; kiểm thử chủ sở hữu, lệnh cũ, theo dõi kết nối và lỗi API nằm trong suite tính năng, không tính fixture là tin thực.

@@ -6,9 +6,9 @@ Mô hình khóa cửa RFID dùng **ESP32, MQTT, Node-RED và Web App**, mô ph�
 
 ## Demo
 
-<img src="docs/images/demo-w8.jpg" alt="Wokwi servo mở và dashboard nhận trạng thái cửa từ bài kiểm thử tuần 8" width="800">
+<img src="docs/images/dashboard-w9-controls.png" alt="Dashboard RFID với khung trạng thái cửa, điều khiển và voice riêng" width="800">
 
-Ảnh kiểm thử thực ngày 13/10/2026: mở khóa từ Web, servo mở và dashboard hiển thị cửa OPEN hợp lệ. Xem [kết quả và phạm vi kiểm thử](docs/results.md).
+Giao diện Web ngày 14/10/2026: trạng thái cửa, điều khiển và voice ở các khung riêng. Ảnh và kết quả Wokwi tuần 8 được giữ trong Results. Xem [kết quả và phạm vi kiểm thử](docs/results.md).
 
 Tuần 8 đã build firmware, sửa lỗi idle, chạy 10 chu kỳ RFID đầy đủ, hai đợt cho mỗi cảnh báo và quan sát hơn 15 phút với 893/893 mẫu Online. Đã chạy thêm10 chu kỳ Web mở/đóng và RFID local khi ngắt mạng, chốt M4 nội bộ trong mô phỏng. Video báo cáo cuối/người chạy độc lập còn cần bổ sung. [Kết quả và phạm vi xác minh](docs/results.md#tích-hợp-tuần-8-ngày-13102026).
 
@@ -16,13 +16,14 @@ Tuần 9 (14/10/2026): chặn event/ACK khác phiên, đối chiếu ACK bằng 
 
 ## Chức năng
 
-- **RFID:** whitelist thẻ hợp lệ, chống đọc lặp và khóa tạm sau nhiều lần quét sai.
+- **RFID:** quản lý tên và quyền thẻ trên Web; thêm/sửa/tắt/xóa, giới hạn ngày/giờ và ngày hết hạn, lưu trên ESP32; chống đọc lặp và khóa tạm sau nhiều lần bị từ chối.
 - **Điều khiển khóa:** relay/servo, chờ mở cửa và khóa lại theo timer.
 - **Cảnh báo:** phát hiện cửa mở khi chưa được cấp quyền, nhắc khi mở cửa hợp lệ quá lâu.
 - **MQTT:** trao đổi state, event, availability, command và ACK; kiểm tra session/sequence.
-- **Web:** dashboard responsive với ba tab Tổng quan/RFID/Kỹ thuật; UID, kết quả quét thẻ, khóa tạm, tìm kiếm/lọc lịch sử; cảnh báo, status/unlock và hộp xác nhận.
+- **Web:** dashboard responsive với năm tab Tổng quan/RFID/Lịch sử/Quản lý thẻ/Kỹ thuật; tìm kiếm, lọc nguồn/ngày, xuất CSV; cảnh báo, status/unlock và hộp xác nhận. Dropdown và lịch ngày đồng bộ giao diện.
 - **Middleware:** mã điều khiển cho API, kiểm tra online/freshness, chặn sử dụng state retained để cấp quyền, hai rule DOOR_FORCED/LEFT_OPEN_WARN và lịch sử xử lý từng rule.
-- **Telegram tùy chọn:** gửi cảnh báo R1/R2 vào cuộc trò chuyện riêng; cấu hình local, chống gửi lặp và ghi kết quả API. [Thiết lập và phạm vi](docs/telegram.md).
+- **Telegram tùy chọn:** gửi cảnh báo cửa, lịch sử bổ sung và mất/kết nối lại; xem trạng thái/lịch sử bằng nút tiếng Việt hoặc `/status`, `/history`; cấu hình local và chống gửi lặp. [Thiết lập và phạm vi](docs/telegram.md).
+- **Giọng nói trên Web:** nói câu tiếng Việt để chuyển tab hoặc đọc trạng thái; mở khóa qua bước xác nhận. Có thanh mức âm và thông báo lỗi micro/dịch vụ. [Hướng dẫn và phạm vi xác minh](docs/voice-proposal.md).
 - **Nhật ký Offline:** ESP32 giữ sự kiện trong NVS và gửi bù có xác nhận; tab Lịch sử cửa giữ nhật ký qua restart Web, Telegram gửi bản tổng hợp lịch sử. [Cơ chế và giới hạn](docs/offline-history.md).
 
 ## Hoạt động thế nào?
@@ -85,7 +86,8 @@ Nếu nhiều người chạy bản clone đồng thời, chọn topic BASE riê
 | [Testing](docs/testing.md) | Test logic, kiểm thử mô phỏng và cách ghi kết quả |
 | [Telegram](docs/telegram.md) | Tạo bot, chọn Chat ID, gửi thử và nhận R1/R2 |
 | [Offline history](docs/offline-history.md) | Lưu NVS, gửi bù, lịch sử Web/Telegram và kết quả thực |
-| [Voice proposal](docs/voice-proposal.md) | Đề xuất giọng nói trên Web, chưa triển khai |
+| [Voice](docs/voice-proposal.md) | Câu nói, tự chuyển tab, kiểm tra micro và giới hạn trình duyệt |
+| [Quản lý thẻ](docs/card-management.md) | Thêm/sửa/tắt/xóa thẻ, lịch sử dụng và ngày hết hạn |
 | [Changelog](CHANGELOG.md) | Thay đổi đã thực hiện theo ngày |
 
 ## Cấu trúc project
@@ -109,7 +111,7 @@ CHANGELOG.md         Lịch sử thay đổi
 
 Bản hiện tại phát triển từ baseline tuần 6, bổ sung rule nhắc đóng cửa, lịch sử xử lý và dashboard theo dõi RFID ở tuần 7. Ngày 12/10/2026, **23/23 regression tuần 7, 8/8 bài logic dashboard và bộ middleware kế thừa đạt**. Buổi kiểm thử trước nâng cấp dashboard ghi nhận 7/7 bài P0 theo phạm vi logic/HTTP/Wokwi, hai đợt R1/R2 và offline/reconnect. Phạm vi kiểm tra giao diện mới được ghi riêng tại [Results](docs/results.md).
 
-Project phục vụ học tập/mô phỏng. Broker mặc định là công cộng, chưa có TLS/ACL; whitelist dựa trên UID. Chưa thử khóa cửa thật. Telegram R1/R2 và lịch sử gửi bù đã được người dùng xác nhận nhận tin thực. Nhật ký NVS có giới hạn 24 bản ghi chưa ACK; xem phạm vi trong Offline history. Voice mới có đề xuất, chưa triển khai.
+Project phục vụ học tập/mô phỏng. Broker mặc định là công cộng, chưa có TLS/ACL; whitelist dựa trên UID. Chưa thử khóa cửa thật. Telegram R1/R2 và lịch sử gửi bù đã được người dùng xác nhận nhận tin thực. Nhật ký NVS có giới hạn 24 bản ghi chưa ACK; xem phạm vi trong Offline history. Voice đã triển khai; người dùng đã xác nhận tự chuyển tab và hộp xác nhận mở khóa sau khi bật lại micro.
 
 ## Hướng phát triển
 

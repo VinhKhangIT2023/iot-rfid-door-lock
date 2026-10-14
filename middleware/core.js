@@ -20,10 +20,11 @@ function recordRfid(model, row) {
   const uidMatch=detail.match(/(?:^|\s)uid=([a-f0-9]+)(?=\s|$)/i);
   const uid=uidMatch && [8,14,20].includes(uidMatch[1].length)?uidMatch[1].toUpperCase():null;
   if(['accepted','denied','ignored'].includes(outcome) && !uid) return;
-  const name=detail.match(/(?:^|\s)name=([^\s]+)/);
+  const name=detail.match(/(?:^|\s)name=(.+?)(?=\s+(?:uid|src|reason|fail)=|$)/);
+  const reason=detail.match(/(?:^|\s)reason=([^\s]+)/);
   const attempts=detail.match(/(?:^|\s)fail=(\d+)\/(\d+)(?=\s|$)/);
   model.rfidHistory.push({time_utc:row.time_utc,event:data.evt,outcome,uid,
-    name:name?name[1]:null,attempt:attempts?Number(attempts[1]):null,
+    name:name?name[1]:null,reason:reason?reason[1]:null,attempt:attempts?Number(attempts[1]):null,
     attempt_limit:attempts?Number(attempts[2]):null,
     uptime_ms:Number.isFinite(data.uptime_ms)?data.uptime_ms:null,
     observed_session:model.state?model.state.session:null,session_source:'observed_state',
@@ -70,16 +71,28 @@ function recordRuleAction(model, request, result, now) {
 function ingest(model, topic, payload, retained, now, receiptKnown=false) {
   if(typeof topic!=='string' || !topic.startsWith(BASE+'/')) return {error:'topic'};
   const suffix=topic.slice(BASE.length+1);
-  if (!['availability','state','event','ack','cmd','history'].includes(suffix)) return {error:'topic'};
+  if (!['availability','state','event','ack','cmd','history','policy','policy_ack'].includes(suffix)) return {error:'topic'};
   let data;
   try { data=suffix==='availability'?String(payload):JSON.parse(String(payload)); }
   catch(e) { return {error:'invalid_json'}; }
   if(suffix==='availability' && !['online','offline'].includes(data)) return {error:'availability_schema'};
   if(suffix==='state' && (!data || !['LOCKED','UNLOCKED_WAIT_OPEN','DOOR_OPEN_AUTH','ALARM'].includes(data.state) || !/^[a-f0-9]{16}$/i.test(data.session||'') || !['OPEN','CLOSED'].includes(data.door))) return {error:'state_schema'};
+  if(suffix==='state'&&data.policy_revision!==undefined&&(!Number.isSafeInteger(data.policy_revision)||data.policy_revision<0||typeof data.policy_ok!=='boolean'||typeof data.clock_synced!=='boolean'))return {error:'state_schema'};
   if(suffix==='event' && (!data || Array.isArray(data) || typeof data.evt!=='string' || !data.evt)) return {error:'event_schema'};
   if(suffix==='ack' && (!data || Array.isArray(data) || typeof data!=='object' || !['executed','rejected','expired'].includes(data.result))) return {error:'ack_schema'};
   const row={time_utc:new Date(now).toISOString(),topic,retained:!!retained,data};
   model.history.push(row); model.history=model.history.slice(-200);
+  if(suffix==='policy'||suffix==='policy_ack'){
+    let reason=retained?'retained':!model.state||!model.freshAt||now-model.freshAt>FRESHNESS_MS?'waiting_direct_state':data?.session!==model.state.session?'old_session':null;
+    if(!reason){
+      try{if(suffix==='policy'){require('./card_policy').normalize(data);if(typeof data.ok!=='boolean')throw Error();}
+        else if(!Number.isSafeInteger(data.revision)||data.revision<0||!['saved','rejected'].includes(data.result))throw Error();}
+      catch{reason='policy_schema';}
+    }
+    if(reason)row.ignored_reason=reason;
+    else if(suffix==='policy')model.policy=data;else model.policyAck={...data,received_at:row.time_utc};
+    return {row,request:null,rule:null};
+  }
   if(suffix==='history') {
     const valid=require('./history_store').validEvent;
     const reason=retained?'retained':!valid(data)||data.replayed!==true?'history_schema':
@@ -111,7 +124,7 @@ function ingest(model, topic, payload, retained, now, receiptKnown=false) {
     if(!retained) {
       if(!model.state || model.state.session!==data.session) {
         if(model.state)model.retiredSessions=[...(model.retiredSessions||[]),model.state.session].slice(-32);
-        model.seq=0; model.alarm=false; model.leftOpen=false; model.ack=null;
+        model.seq=0; model.alarm=false; model.leftOpen=false; model.ack=null;model.policy=null;model.policyAck=null;
       }
       // A direct state proves the device is live. An old retained availability
       // or a previous simulator's delayed will must not keep it offline forever.

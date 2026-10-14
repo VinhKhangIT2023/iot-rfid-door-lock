@@ -6,6 +6,7 @@
 #include <esp_system.h>
 #include <time.h>
 #include "event_journal.h"
+#include "access_policy.h"
 #include "network_config.h"
 #include "network_bridge.h"
 
@@ -18,6 +19,7 @@ QueueHandle_t events = nullptr;
 EventJournal journal;
 char bootId[17]="";
 uint32_t eventSequence=0, journalSentAt=0;
+uint32_t policyPublishedAt=0;
 char awaitingId[32]="";
 std::atomic<bool> online{false}, paused{false};
 std::atomic<bool> statePaused{false};
@@ -27,7 +29,7 @@ WiFiClient socketClient;
 PubSubClient mqtt(socketClient);
 char session[17] = "";
 uint32_t lastSeq = 0;
-char commandTopic[128], statusTopic[128], stateTopic[128], historyAckTopic[128];
+char commandTopic[128], statusTopic[128], stateTopic[128], historyAckTopic[128],policyCommandTopic[128];
 
 void topic(char* out, size_t size, const char* suffix) {
   snprintf(out, size, "%s/%s", NetCfg::BASE, suffix);
@@ -51,6 +53,16 @@ void reject(const char* reason) {
 }
 
 void callback(char* incomingTopic, byte* payload, unsigned int length) {
+  if(strcmp(incomingTopic,policyCommandTopic)==0){
+    DynamicJsonDocument doc(4096);const char* reason=nullptr;uint64_t revision=0;
+    if(!length||length>2048||deserializeJson(doc,payload,length))reason="policy_json";
+    else if(!doc["session"].is<const char*>()||strcmp(doc["session"],session))reason="old_session";
+    else {revision=doc["revision"]|static_cast<uint64_t>(0);reason=AccessPolicy::update(doc.as<JsonVariantConst>());}
+    StaticJsonDocument<256> ack;ack["session"]=session;ack["revision"]=revision;ack["result"]=reason?"rejected":"saved";if(reason)ack["reason"]=reason;
+    char body[256],name[128];serializeJson(ack,body,sizeof(body));topic(name,sizeof(name),"policy_ack");mqtt.publish(name,body,false);
+    policyPublishedAt=millis()-5000;
+    Serial.printf("[POLICY] update revision=%llu result=%s\n",revision,reason?reason:"saved");return;
+  }
   if (strcmp(incomingTopic, historyAckTopic)==0) {
     if(!awaitingId[0])return;
     StaticJsonDocument<192> receipt;
@@ -77,6 +89,7 @@ void callback(char* incomingTopic, byte* payload, unsigned int length) {
   if (seq == 0 || seq <= lastSeq) { reject("duplicate_or_old_seq"); return; }
   const char* action = doc["action"];
   if (strcmp(action, "unlock") && strcmp(action, "status")) { reject("action"); return; }
+  if(!strcmp(action,"status"))policyPublishedAt=millis()-5000;
   Command cmd{};
   strlcpy(cmd.action, action, sizeof(cmd.action));
   cmd.seq = seq; cmd.at = millis(); cmd.epoch = epoch.load();
@@ -93,6 +106,7 @@ void invalidate() {
 }
 
 void worker(void*) {
+  AccessPolicy::load();
   journal.begin();
   Serial.printf("[JOURNAL] NVS=%s pending=%u capacity=%u\n",journal.ok()?"ok":"error",journal.count(),EventJournal::Capacity);
   Packet pendingEvent{};bool havePendingEvent=false;
@@ -105,13 +119,14 @@ void worker(void*) {
   Serial.println("[NET] WiFi started; waiting for IP");
   mqtt.setServer(NetCfg::HOST, NetCfg::PORT);
   mqtt.setCallback(callback);
-  if (!mqtt.setBufferSize(768)) { Serial.println("[NET] MQTT buffer allocation failed"); vTaskDelete(nullptr); return; }
+  if (!mqtt.setBufferSize(3072)) { Serial.println("[NET] MQTT buffer allocation failed"); vTaskDelete(nullptr); return; }
   mqtt.setSocketTimeout(2);
   mqtt.setKeepAlive(15);
   topic(commandTopic, sizeof(commandTopic), "cmd");
   topic(statusTopic, sizeof(statusTopic), "availability");
   topic(stateTopic, sizeof(stateTopic), "state");
   topic(historyAckTopic,sizeof(historyAckTopic),"history_ack");
+  topic(policyCommandTopic,sizeof(policyCommandTopic),"policy_cmd");
   uint32_t attemptAt = millis() - NetCfg::RETRY_MS;
   uint32_t wifiAttemptAt = millis();
   uint32_t publishedAt = millis() - NetCfg::HEARTBEAT_MS;
@@ -157,7 +172,8 @@ void worker(void*) {
         // Blocking socket operations are confined to this worker, never the door loop.
         if (mqtt.connect(clientId, statusTopic, 1, true, "offline")) {
           epoch++;
-          if (!mqtt.subscribe(commandTopic, 1)||!mqtt.subscribe(historyAckTopic,1)) { mqtt.disconnect(); continue; }
+          if (!mqtt.subscribe(commandTopic, 1)||!mqtt.subscribe(historyAckTopic,1)||!mqtt.subscribe(policyCommandTopic,1)) { mqtt.disconnect(); continue; }
+          policyPublishedAt=now-5000;
           awaitingId[0]=0;journalSentAt=0;
           online = true;
           mqtt.publish(statusTopic, "online", true);
@@ -180,7 +196,7 @@ void worker(void*) {
     if (wasStatePaused && !suppressState) publishedAt = now - NetCfg::HEARTBEAT_MS;
     wasStatePaused = suppressState;
     if (!suppressState && haveSnapshot && (changed || now - publishedAt >= NetCfg::HEARTBEAT_MS)) {
-      StaticJsonDocument<448> doc;
+      StaticJsonDocument<640> doc;
       doc["state"] = latest.state;
       doc["door"] = latest.doorOpen ? "OPEN" : "CLOSED";
       doc["lockout"] = latest.lockout;
@@ -191,8 +207,14 @@ void worker(void*) {
       doc["journal_pending"]=journal.count()+(havePendingEvent?1:0)+uxQueueMessagesWaiting(events);
       doc["journal_capacity"]=EventJournal::Capacity;
       doc["journal_ok"]=journal.ok();
-      char body[448]; serializeJson(doc, body, sizeof(body));
+      doc["policy_revision"]=AccessPolicy::revision();doc["policy_ok"]=AccessPolicy::healthy();
+      doc["clock_synced"]=time(nullptr)>=1704067200;
+      char body[640]; serializeJson(doc, body, sizeof(body));
       if (mqtt.publish(stateTopic, body, true)) publishedAt = now;
+    }
+    if(haveSnapshot&&!suppressState&&now-policyPublishedAt>=5000){
+      DynamicJsonDocument doc(4096);AccessPolicy::writeJson(doc,session);char body[2048],name[128];
+      if(measureJson(doc)<sizeof(body)){serializeJson(doc,body,sizeof(body));topic(name,sizeof(name),"policy");if(mqtt.publish(name,body,false))policyPublishedAt=now;}
     }
     Packet p{};
     if (xQueueReceive(outgoing, &p, 0) == pdTRUE) {
@@ -239,7 +261,7 @@ void networkBegin() {
   snapshots = xQueueCreate(1, sizeof(Snapshot));
   commands = xQueueCreate(8, sizeof(Command));
   events=xQueueCreate(64,sizeof(Packet));
-  if (!outgoing || !snapshots || !commands||!events) { Serial.println("[NET] Queue allocation failed; local mode only"); return; }
+  if (!outgoing || !snapshots || !commands||!events||!AccessPolicy::transportBegin()) { Serial.println("[NET] Queue allocation failed; local mode only"); return; }
   if (xTaskCreatePinnedToCore(worker, "mqtt-worker", 8192, nullptr, 1, nullptr, 0) != pdPASS)
     Serial.println("[NET] Task creation failed; local mode only");
 }

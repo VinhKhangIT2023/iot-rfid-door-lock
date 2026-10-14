@@ -11,7 +11,7 @@ Khi ESP32 mất Wi-Fi/MQTT, RFID, cảm biến cửa, servo và còi vẫn hoạ
 3. Sự kiện gửi bù có nhãn riêng. Thời gian xảy ra lấy từ đồng hồ thiết bị nếu đã đồng bộ NTP; thời gian nhận ở Web được ghi riêng. Nếu thiết bị chưa có giờ thực, hiển thị uptime và boot ID, không tự đặt giờ xảy ra.
 4. Khi Telegram đã cấu hình, bot tự gửi **Lịch sử đồng bộ**, tối đa 8 sự kiện mỗi tin. Nội dung có mở/đóng cửa, cấp quyền/thẻ sai, khóa tạm và R1/R2. Đây là nhật ký quá khứ, không xác nhận trạng thái cửa hiện tại.
 
-Nhật ký lưu tại `runtime/event_journal.jsonl` của project, không nằm trên Git. Web giữ lịch sử qua restart middleware, hiển thị 300 bản ghi gần nhất; file giữ các bản ghi và dấu đã gửi Telegram. Không xóa file này khi muốn giữ lịch sử và dấu chống lặp.
+Nhật ký lưu tại `runtime/event_journal.jsonl` của project, không nằm trên Git. Web giữ lịch sử qua restart middleware; tìm/lọc trên toàn bộ bản ghi, phân trang 50 dòng. File giữ các bản ghi và dấu đã gửi Telegram. Không xóa file này khi muốn giữ lịch sử và dấu chống lặp.
 
 ## Cơ chế lưu và xác nhận
 
@@ -27,7 +27,7 @@ NVS giữ dữ liệu qua khởi động lại/mất nguồn trên ESP32; khả 
 
 Bộ nhớ có giới hạn. Firmware giữ nguyên 24 bản ghi NVS chưa được xác nhận, không ghi đè; khi đầy, các sự kiện tiếp theo chờ trong RAM. Nếu cả hàng đợi RAM đầy, `dropped` tăng; không bảo đảm giữ vô hạn khi Offline lâu. Nếu mất nguồn trước khi worker ghi NVS, phần đang ở RAM có thể mất. Web hiển thị `journal_pending`, `journal_capacity`, `journal_ok` khi state còn mới.
 
-Telegram lịch sử dùng outbox lưu trên máy. Lỗi API/mạng giữ các bản chưa xác nhận và thử lại sau ít nhất 60 giây trong lúc dịch vụ còn chạy. Tắt `enabled` giữ outbox chờ; bật lại tiếp tục gửi. Sau API thành công, dấu đã gửi được ghi vào file. Timeout hoặc crash sau khi Telegram nhận nhưng trước khi lưu dấu có thể gây gửi lại; các tin có ID để đối chiếu. API không cung cấp bảo đảm đúng một lần cho thao tác này. Cảnh báo trực tiếp R1/R2 giữ chính sách cũ, không tự thử lại.
+Telegram lịch sử dùng outbox lưu trên máy. Lỗi API/mạng giữ các bản chưa xác nhận và thử lại sau ít nhất 60 giây trong lúc dịch vụ còn chạy. Tắt `enabled` giữ outbox chờ; bật lại tiếp tục gửi. Sau API thành công, dấu đã gửi được ghi vào file. Timeout hoặc crash sau khi Telegram nhận nhưng trước khi lưu dấu có thể gây gửi lại; ID vẫn có trong Web/CSV/log để đối chiếu, tin Telegram hiển thị mô tả dễ đọc. API không cung cấp bảo đảm đúng một lần cho thao tác này. Cảnh báo trực tiếp R1/R2 giữ chính sách cũ, không tự thử lại.
 
 Đồng hồ NTP có độ chính xác theo giây trong payload hiện tại. Timer cửa dùng uptime mô phỏng; số đo timer không suy từ chênh giờ lịch. MQTT vẫn dùng broker công cộng; kiểm tra session/ID giúp chống nhầm dữ liệu, không thay TLS/ACL.
 
@@ -40,3 +40,13 @@ Telegram lịch sử dùng outbox lưu trên máy. Lỗi API/mạng giữ các b
 - Restart middleware giữ đủ 13 bản ghi/ID đã lưu và không phát thêm tin lịch sử đã xác nhận. Web Online/LOCKED/CLOSED, pending=0, dropped=0. Tab lịch sử, lọc Offline, tìm UID và trạng thái không khớp được kiểm tra trên trình duyệt; không có lỗi JavaScript.
 
 `netoff`, `neton`, `stateoff`, `stateon`, `reboot` chỉ là lệnh Serial chẩn đoán, không được nhận qua API/MQTT command. Stop Simulation dừng cả thiết bị nên không dùng để mô phỏng một người mở cửa khi mất Wi-Fi.
+
+## Bộ lọc và xuất dữ liệu
+
+Ba nguồn trong Web không trùng nhau:
+
+- **Xảy ra khi Offline:** thiết bị mất Wi-Fi/MQTT lúc hoạt động xảy ra; được nhận sau khi mạng trở lại.
+- **Gửi lại khi Online:** có mạng lúc xảy ra, nhưng chưa nhận được xác nhận lưu nên thiết bị gửi lại sau. Ví dụ dịch vụ Web đang dừng.
+- **Trực tiếp:** hoạt động được nhận trực tiếp, không phải bản gửi lại.
+
+“Gửi bù” trong các báo cáo cũ là tên chung cho cả hai nhóm đầu. Chọn ngày bằng lịch trên Web (UTC+7), ngày kết thúc gồm cả ngày được chọn. Không biết giờ thực lúc xảy ra thì lọc theo ngày nhận, Web ghi rõ điều đó. Tìm theo tên thẻ/mã thẻ/mô tả hoặc mã event. **Xuất CSV** giữ cùng bộ lọc, tối đa 10.000 dòng; CSV giữ các trường gốc để đối chiếu kỹ thuật.

@@ -1,11 +1,11 @@
 const telegram=require('./telegram_notifications');
-const LABELS={UNLOCK_GRANTED:'Cấp quyền mở khóa',CARD_DENIED:'Thẻ bị từ chối',CARD_IGNORED_LOCKOUT:'Thẻ bị bỏ qua khi khóa tạm',LOCKOUT_START:'Bắt đầu khóa tạm RFID',LOCKOUT_END:'Kết thúc khóa tạm RFID',DOOR_FORCED:'🚨 R1 · Mở cửa trái phép',DOOR_OPENED:'Cửa mở hợp lệ',DOOR_REOPENED:'Cửa mở lại',DOOR_CLOSED:'Cửa đã đóng',RELOCKED:'Khóa lại',LEFT_OPEN_WARN:'⚠️ R2 · Cửa mở hợp lệ quá lâu',ALARM_MUTED:'Còi kết thúc thời gian phát',ALARM_CLEARED:'Báo động đã phục hồi',CMD_UNKNOWN:'Lệnh local không hỗ trợ',BOOT_DOOR_OPEN:'Cửa mở khi thiết bị khởi động'};
+const presentation=require('./event_presentation'),LABELS=presentation.LABELS;
 function text(rows,config){
   const name=String(config.deviceName||'Nhóm 25 · Cửa 01').replace(/[\r\n\t]/g,' ').slice(0,80);
   const format=new Intl.DateTimeFormat('vi-VN',{dateStyle:'short',timeStyle:'medium',timeZone:'Asia/Bangkok'});
-  return '📚 Lịch sử đồng bộ · '+name+'\nSự kiện đã xảy ra khi mất kết nối hoặc chưa được xác nhận. Đây không phải trạng thái cửa hiện tại.\n\n'+rows.map(r=>{
-    const time=r.event_time_utc?format.format(new Date(r.event_time_utc))+' UTC+7':'Sau khởi động '+(r.data.uptime_ms/1000).toFixed(1)+'s · chưa có giờ thực';
-    return '• '+time+' — '+(LABELS[r.data.evt]||r.data.evt)+(r.data.offline?' [Offline]':' [Gửi bù]')+'\n'+r.data.detail.replace(/[\r\n\t]/g,' ').slice(0,160)+'\nID '+r.event_id;
+  return '📚 Lịch sử đồng bộ · '+name+'\nCác hoạt động trước đây vừa được nhận bổ sung. Thông tin này không mô tả cửa lúc này.\n\n'+rows.map(r=>{
+    const time=r.event_time_utc?format.format(new Date(r.event_time_utc))+' UTC+7':'Sau khởi động '+(r.data.uptime_ms/1000).toFixed(1)+' giây · chưa có giờ thực';
+    return '• '+time+' — '+presentation.title(r.data)+'\n'+presentation.detail(r.data)+'\n'+presentation.source(r);
   }).join('\n\n');
 }
 function createWorker({store,readConfig=telegram.loadConfig,fetchImpl=fetch,now=Date.now,onResult=()=>{}}){

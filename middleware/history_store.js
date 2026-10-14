@@ -1,6 +1,6 @@
 const fs=require('node:fs'),path=require('node:path');
 const FILE=path.resolve(__dirname,'../runtime/event_journal.jsonl');
-const EVENTS=new Set(['UNLOCK_GRANTED','CARD_DENIED','CARD_IGNORED_LOCKOUT','LOCKOUT_START','LOCKOUT_END','DOOR_FORCED','DOOR_OPENED','DOOR_REOPENED','DOOR_CLOSED','RELOCKED','LEFT_OPEN_WARN','ALARM_MUTED','ALARM_CLEARED','CMD_UNKNOWN','BOOT_DOOR_OPEN']);
+const EVENTS=new Set(['UNLOCK_GRANTED','CARD_DENIED','CARD_IGNORED_LOCKOUT','LOCKOUT_START','LOCKOUT_END','DOOR_FORCED','DOOR_OPENED','DOOR_REOPENED','DOOR_CLOSED','RELOCKED','LEFT_OPEN_WARN','ALARM_MUTED','ALARM_CLEARED','CMD_UNKNOWN','BOOT_DOOR_OPEN','POLICY_APPLIED']);
 function validEvent(d){
   return !!d&&EVENTS.has(d.evt)&&['LOCKED','UNLOCKED_WAIT_OPEN','DOOR_OPEN_AUTH','ALARM'].includes(d.state)&&
     /^[a-f0-9]{16}$/i.test(d.boot_id||'')&&new RegExp('^'+d.boot_id+'-[a-f0-9]{8}$','i').test(d.event_id||'')&&
@@ -43,7 +43,7 @@ function createStore({file=FILE,fsImpl=fs}={}){
       historical:!!historical,data:{...data}};
     append(row);return {row,duplicate:false};
   }
-  return {accept,has:id=>records.has(id),view:()=>({ok:healthy,total:records.size,events:[...records.values()].slice(-300)}),
+  return {accept,has:id=>records.has(id),query:options=>require('./history_query').query([...records.values()],options),view:()=>({ok:healthy,total:records.size,events:[...records.values()].slice(-300)}),
     pending:()=>[...records.values()].filter(r=>r.historical&&!done.has(r.event_id)),
     complete:ids=>{for(const id of ids)if(records.has(id)&&!done.has(id))append({type:'history_telegram_done',event_id:id,time_utc:new Date().toISOString()});}};
 }

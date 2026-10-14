@@ -68,3 +68,9 @@ Lượt thực ngày 14/10/2026: người dùng nhận tin thử, R1 và R2 do t
 `npm test` chạy thêm 19 bài `tests_history.js`; chạy riêng bằng `npm run test:history`. Kiểm thử file/fsync/restart/partial-write thật trên thư mục tạm; HTTP Telegram hoàn toàn giả lập. Tách dữ liệu cũ khỏi trạng thái/rule/điều khiển hiện tại; chỉ receipt sau lưu thành công, chống lặp ID, retry outbox và receipt không tạo vòng ACK.
 
 Wokwi thực: netoff/R1/Blue→OPEN→R2→CLOSED/neton lưu và ACK đủ 9 sự kiện, Telegram được người dùng xác nhận đầy đủ. Software reboot giữ/gửi lại 2 sự kiện NVS; log có thêm reset watchdog của mô phỏng rồi phục hồi. Restart Node-RED giữ 13 bản ghi/ID, không gửi lại lịch sử đã xác nhận. Tab lịch sử/tìm UID/lọc Offline/empty được kiểm tra thực, không có lỗi JavaScript. Chưa thử mất điện phần cứng, ghi đầy NVS/RAM thực hoặc mất mạng Telegram thực; xem [phạm vi](offline-history.md).
+
+## Bộ tính năng cuối tuần 9
+
+`npm run test:features` chạy 24 fixture: schema/quyền thẻ, lưu cấu hình qua restart, ACK/áp dụng/xung đột phiên, xác thực API, nguồn lịch sử không trùng, lọc ngày/phân trang/CSV, bot chủ sở hữu/lệnh cũ/kết nối và voice lỗi/kết quả tạm/cuối. Toàn suite có 118 fixture W7–W9/dashboard/HTTP/Telegram/history/features cùng bộ kế thừa; speech engine và HTTP Telegram trong fixture được giả lập.
+
+Wokwi build firmware có chính sách NVS; Serial `policytest` chạy 10 kiểm tra bằng thời gian giả định trên firmware thật, không sửa quyền hoặc điều khiển khóa. Lượt quét thật xác nhận Blue bị từ chối vì hết hạn, cập nhật lại có quyền rồi mở/đóng/R2. Web kiểm tra dropdown chuột/bàn phím, chọn ngày, khung giờ, nguồn lịch sử/CSV và desktop/mobile. Người dùng xác nhận voice tự chuyển tab và hiện xác nhận mở khóa sau bật lại micro. [Kết quả và giới hạn](results.md).

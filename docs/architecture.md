@@ -54,7 +54,7 @@ Sơ đồ dây đầy đủ nằm trong [diagram.json](../diagram.json). Chân �
 | Servo | 26; 0° khóa, 90° mở |
 | Buzzer | 25 |
 
-Ngưỡng timer và whitelist nằm trong [main.cpp](../src/main.cpp).
+Timer nằm trong [main.cpp](../src/main.cpp); quyền thẻ mặc định và lưu NVS ở [access_policy.cpp](../src/access_policy.cpp).
 
 ## Trạng thái cửa
 
@@ -67,7 +67,7 @@ Ngưỡng timer và whitelist nằm trong [main.cpp](../src/main.cpp).
 
 ## Thông số hiện tại
 
-Whitelist và timer nằm trong `src/main.cpp`: debounce 50 ms, cooldown thẻ 1500 ms, cảnh báo mở lâu 15000 ms, giới hạn âm báo động 10000 ms. Ba lần quét sai liên tiếp gây khóa tạm RFID 10000 ms; bộ đếm sai được reset khi khoảng cách từ lần sai gần nhất đạt 30000 ms hoặc khi nhận thẻ hợp lệ. Đây là khoảng cách giữa các lần sai, không phải cửa sổ tổng 30 giây. Khóa tạm chỉ chặn RFID; REMOTE/Serial vẫn có thể cấp quyền theo chính sách hiện tại. Timer firmware dùng thời gian mô phỏng; freshness middleware dùng thời gian máy tính.
+Timer nằm trong `src/main.cpp`: debounce 50 ms, cooldown thẻ 1500 ms, cảnh báo mở lâu 15000 ms, giới hạn âm báo động 10000 ms. Ba lần quét sai liên tiếp gây khóa tạm RFID 10000 ms; bộ đếm sai được reset khi khoảng cách từ lần sai gần nhất đạt 30000 ms hoặc khi nhận thẻ hợp lệ. Đây là khoảng cách giữa các lần sai, không phải cửa sổ tổng 30 giây. Khóa tạm chỉ chặn RFID; REMOTE/Serial vẫn có thể cấp quyền theo chính sách hiện tại. Timer firmware dùng thời gian mô phỏng; freshness middleware dùng thời gian máy tính.
 
 Nếu đổi BASE/broker hoặc sửa Web/flow, xem [cách cài và chạy](getting-started.md).
 
@@ -77,7 +77,7 @@ Tuần 8: heartbeat 1000 ms mô phỏng, snapshot 100 ms, loop nghỉ 5 ms để
 
 State trực tiếp của phiên mới xóa ACK cũ và reset cờ rule/sequence. HTTP 202 trả cả session và seq. Web hủy lệnh đang chờ khi quan sát thiết bị đổi phiên; không tự gửi lại. Event/ACK của firmware tuần 6–7 không có session nên chỉ vào raw history; cần build firmware hiện tại (từ tuần 8).
 
-`http_guard.js` chạy trước bộ parser chung của Node-RED cho POST `/api/command`. Chấp nhận JSON object tối đa 2 KiB: JSON sai trả 400 `invalid_json`, array trả 400 `command_schema`, body quá lớn trả 413 `payload_too_large`, Content-Type khác application/json trả 415 `content_type`. Sau parse, sai mã trả 403; action sai hoặc offline/stale trả 409; lệnh hợp lệ trả 202. Các GET không đi qua guard này. `body-parser@1.20.8` được khai báo trực tiếp và khóa bằng lockfile, là phiên bản đã có trong cây dependency.
+`http_guard.js` chạy trước bộ parser chung của Node-RED cho POST `/api/command`, `/api/cards`, `/api/monitor`. Chấp nhận JSON object tối đa 2 KiB: JSON sai trả 400 `invalid_json`, array trả 400 `command_schema`, body quá lớn trả 413 `payload_too_large`, Content-Type khác application/json trả 415 `content_type`. Sau parse, sai mã trả 403; action sai hoặc offline/stale trả 409; lệnh hợp lệ trả 202. Các GET không đi qua guard này. `body-parser@1.20.8` được khai báo trực tiếp và khóa bằng lockfile, là phiên bản đã có trong cây dependency.
 
 Session/seq hạn chế nhầm phiên và lặp lệnh; không thay thế TLS/ACL. Bearer code bảo vệ API local, không bảo vệ topic MQTT công cộng.
 
@@ -86,3 +86,11 @@ Session/seq hạn chế nhầm phiên và lặp lệnh; không thay thế TLS/AC
 Firmware thêm `event_journal.h`: 24 bản ghi NVS, queue RAM 64, ID boot/sequence; MQTT worker ghi/xóa NVS, FSM không chờ flash/mạng. Event trực tiếp có metadata ID/boot/offline/giờ nếu có; `/history` chứa sự kiện gửi lại hoặc phục hồi sau reboot. Session trong bản lịch sử là phiên vận chuyển hiện tại; boot ID/uptime giữ nguồn gốc.
 
 Middleware `history_store.js` lưu/fsync vào runtime/event_journal.jsonl rồi publish `/history_ack` JSON `{session,event_id}` QoS1 không retain. Firmware chỉ xóa head đang chờ khớp receipt; gửi lại sau 2 giây mô phỏng nếu chưa có receipt. Sự kiện lịch sử không cập nhật state/rule/RFID trực tiếp hay tạo command. API GET `/api/door` thêm `event_journal`; Web có tab Lịch sử cửa. `history_telegram.js` gửi outbox theo lô, lưu dấu thành công và giữ dữ liệu lỗi để retry. [Chi tiết và các giới hạn](offline-history.md).
+
+## Quyền thẻ, bot và bộ lọc lịch sử
+
+`access_policy.cpp` giữ cấu hình tối đa 8 thẻ trong NVS. MQTT worker kiểm tra schema, ghi cấu hình rồi chuyển qua queue tới loop chính; state báo phiên bản thực đã áp dụng. `/policy_cmd` gắn session hiện tại, không retain; `/policy_ack` báo lưu/từ chối; `/policy` chứa danh sách quan sát. Middleware giữ yêu cầu đã xác nhận ở runtime/card_policy.json, so sánh phiên bản để tránh ghi đè cấu hình mới hoặc dùng ACK lưu làm bằng chứng đã áp dụng. Giới hạn buffer MQTT 3072 byte, cấu hình command tối đa 2048 byte. Quyền thời gian dùng UTC+7, NTP và ngày bắt đầu cho lịch qua đêm. [Hướng dẫn quản lý thẻ](card-management.md).
+
+POST `/api/cards` và `/api/monitor` cần Bearer mã điều khiển. GET `/api/history` trả total/page/limit/has_more/events; `/api/history.csv` giữ bộ lọc q/source/from/to, xuất tối đa 10.000 dòng. `history_query.js` tìm toàn bộ journal, không chỉ cửa sổ hiển thị gần nhất; các nguồn offline/retry/live loại trừ nhau. CSV giữ metadata gốc và chặn ký tự đầu có thể bị bảng tính diễn giải thành công thức.
+
+`telegram_bot.js` đọc lệnh từ cuộc trò chuyện riêng của chủ sở hữu, bỏ qua lệnh quá 5 phút; chỉ đọc trạng thái/lịch sử/hướng dẫn. Theo dõi 30 giây mất trạng thái sẵn sàng rồi gửi một tin, phục hồi một tin; lựa chọn tạm dừng và outbox giữ trên máy. `event_presentation.js` chuyển mã sự kiện/detail thành lời cho người dùng; journal gốc vẫn nguyên. Voice chạy ở trình duyệt, nhận câu cố định và gọi đường UI/API hiện có, không thêm đường mở khóa tự động.

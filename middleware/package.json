@@ -8,7 +8,7 @@
   },
   "scripts": {
     "flow": "node generate_flow.js",
-    "test": "node tests.js && node tests_w7.js && node tests_dashboard.js && node tests_w8.js && node tests_w9.js && node tests_http_guard.js && node tests_telegram.js && node tests_history.js",
+    "test": "node tests.js && node tests_w7.js && node tests_dashboard.js && node tests_w8.js && node tests_w9.js && node tests_http_guard.js && node tests_telegram.js && node tests_history.js && node tests_features.js",
     "start": "node start.js",
     "test:w7": "node tests_w7.js",
     "test:dashboard": "node tests_dashboard.js",
@@ -20,6 +20,7 @@
     "telegram:init": "node telegram_setup.js init",
     "telegram:chats": "node telegram_setup.js chats",
     "telegram:test": "node telegram_setup.js test",
-    "test:history": "node tests_history.js"
+    "test:history": "node tests_history.js",
+    "test:features": "node tests_features.js"
   }
 }

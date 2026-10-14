@@ -152,3 +152,22 @@ Bổ sung sau snapshot G9-RC2. 13 fixture Telegram đạt cùng toàn bộ test 
 ## Lịch sử Offline (14/10/2026)
 
 Đợt bổ sung tiếp theo có thay firmware để lưu NVS/gửi bù, giữ timer/FSM. Khi netoff, người dùng làm R1 và Blue→OPEN→R2→CLOSED; neton gửi đủ 9 sự kiện đúng ID, lưu file và ACK về 0, Telegram nhận đủ và người dùng xác nhận. Software reboot giữ/gửi bù 2 bản ghi NVS; chưa thử mất điện phần cứng thật. Restart Web giữ 13 bản ghi, không gửi lại lịch sử đã xác nhận. 19 bài lịch sử cùng toàn bộ test kế thừa đạt, build firmware đạt; kiểm tra Web tìm/lọc/empty không có lỗi JavaScript. [Cơ chế và giới hạn](offline-history.md).
+
+## Bộ tính năng và sửa tương tác cuối tuần 9 — 14/10/2026
+
+| Phần | Kết quả và phạm vi |
+|---|---|
+| Firmware / policy | Build SUCCESS, RAM 59.260 byte (18,1%), Flash 812.525 byte (62,0%); self-test quyền/thời gian 10/10 trên firmware, dùng thời gian giả định |
+| Hồi quy phần mềm | Bộ kế thừa và 118 fixture W7–W9/dashboard/HTTP/Telegram/history/features đạt; trong đó 24 fixture tính năng mới; HTTP Telegram/speech engine trong suite giả lập |
+| Quyền thẻ thực | Cấu hình có ACK lưu và state/policy cùng revision; Wokwi ghi Blue bị từ chối hết hạn hai lần, cập nhật hạn mới rồi cấp quyền/mở/đóng/R2; quyền còn sau restart mô phỏng |
+| Telegram | Người dùng xác nhận `/status`, `/history` trả lời. Bản lịch sử tiếng Việt mới được API nhận; bỏ các mã event, src/uid/session và ID khỏi tin sử dụng |
+| Thông báo kết nối | Lượt netoff thử lại: ready=false ở 5/20/43 giây PC; API Telegram nhận một tin mất và một tin phục hồi. Lượt đầu bị restart giữa bài nên không tính đạt |
+| Dropdown | Chuột chọn nguồn Offline, kết quả RFID, khung giờ; Arrow/End/Enter chọn được. Offline/retry/live không trùng, API ngày sai 400, CSV 200 |
+| Lịch ngày | Chọn/xóa cả ngày nhận và ngày trả; chuyển Oct→Nov→Dec→Jan rồi quay lại; hai lịch ngày Lịch sử cửa cũng chuyển tháng/chọn/xóa được. Sửa focus đóng sớm và tách popup khỏi label |
+| Lưu trú khách sạn | Xem trước nhận 14:00 ngày 14/10→trả 12:00 ngày 16/10; mã tạo khoảng liên tục, không đặt giới hạn giờ lặp mỗi ngày. Test thiếu/ngược ngày và mốc UTC+7 đạt; không claim đã chờ qua nhiều ngày để quét thẻ thật |
+| Voice thực | Ban đầu micro máy người dùng đang tắt, thanh mức âm không thu tiếng. Sau bật lại, người dùng xác nhận tự chuyển đúng tab không bấm Dừng và câu mở khóa hiện hộp xác nhận rồi hủy |
+| Giao diện | Ô cửa gọn, hình cửa căn giữa chiều cao, voice thành khung riêng; kiểm tra desktop/mobile, dropdown/lịch đồng bộ phong cách |
+
+![Tổng quan và voice bố cục mới](images/dashboard-w9-controls.png)
+
+Các ảnh là giao diện thật của Web khi kiểm tra; dữ liệu điều khiển/mã riêng không được đưa vào ảnh. Chế độ lưu trú vẫn cần đồng hồ thiết bị, mã điều khiển và xác nhận thay đổi quyền. Chưa thử mất điện phần cứng, mọi lịch bằng lượt quét thực hoặc tích hợp Google Assistant/IFTTT. Snapshot G9-RC2 là mốc cũ, không chứa các bổ sung sau đó.
