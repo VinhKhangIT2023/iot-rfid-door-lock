@@ -4,6 +4,14 @@
 
 Chỉ ghi thay đổi đã thực hiện. Project chưa có bản release được đánh số.
 
+## 14/10/2026 — Nhật ký Offline và gửi bù
+
+- Lưu event ở NVS ESP32 theo ID boot/sequence, chờ xác nhận middleware đã lưu/fsync trước khi xóa; queue giới hạn, báo pending/capacity/health/dropped.
+- Tách topic history/history_ack, chống lặp theo ID, giữ lịch sử qua restart Web; dữ liệu quá khứ không thay trạng thái hoặc kích hoạt rule/lệnh hiện tại.
+- Tab Lịch sử cửa có tìm kiếm/lọc, phân biệt giờ xảy ra và giờ nhận; Telegram gửi bản tổng hợp quá khứ với outbox bền vững và retry lỗi có giới hạn nhịp.
+- Bài Offline thực nhận đủ 9 sự kiện và người dùng thấy lịch sử Telegram; software reboot giữ/gửi lại 2 sự kiện NVS. Giới hạn Wokwi/watchdog và chưa thử mất điện phần cứng ghi trong Offline history.
+- Voice có đề xuất trên Web, chưa triển khai; không làm thêm hồ sơ tuần 10.
+
 ## 14/10/2026 — Kênh cảnh báo Telegram tùy chọn
 
 - Gửi R1/R2 đã xác minh phiên tới chat riêng; không thêm lệnh điều khiển cửa qua Telegram.

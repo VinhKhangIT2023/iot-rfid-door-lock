@@ -62,3 +62,9 @@ Ngày14/10/2026 đã chạy bản sạch cùng máy với Wokwi/UI thực, có �
 `npm test` chạy thêm 13 fixture Telegram; `npm run test:telegram` chạy riêng, mọi request Telegram trong suite đều giả lập. Kiểm tra cấu hình tắt/sai, rule đúng phiên, chống lặp, hàng đợi, tin cũ, lỗi API, đóng node và wiring không thêm unlock. Không dùng token thật trong fixture.
 
 Lượt thực ngày 14/10/2026: người dùng nhận tin thử, R1 và R2 do thao tác Wokwi tạo; đối chiếu event→rule đúng session→telegram_delivery API nhận thành công. Mỗi rule một đợt, người dùng xác nhận thấy tin. Chưa kiểm tra mất mạng Telegram thực. [Cách thiết lập và thử lại](telegram.md).
+
+## Nhật ký Offline
+
+`npm test` chạy thêm 19 bài `tests_history.js`; chạy riêng bằng `npm run test:history`. Kiểm thử file/fsync/restart/partial-write thật trên thư mục tạm; HTTP Telegram hoàn toàn giả lập. Tách dữ liệu cũ khỏi trạng thái/rule/điều khiển hiện tại; chỉ receipt sau lưu thành công, chống lặp ID, retry outbox và receipt không tạo vòng ACK.
+
+Wokwi thực: netoff/R1/Blue→OPEN→R2→CLOSED/neton lưu và ACK đủ 9 sự kiện, Telegram được người dùng xác nhận đầy đủ. Software reboot giữ/gửi lại 2 sự kiện NVS; log có thêm reset watchdog của mô phỏng rồi phục hồi. Restart Node-RED giữ 13 bản ghi/ID, không gửi lại lịch sử đã xác nhận. Tab lịch sử/tìm UID/lọc Offline/empty được kiểm tra thực, không có lỗi JavaScript. Chưa thử mất điện phần cứng, ghi đầy NVS/RAM thực hoặc mất mạng Telegram thực; xem [phạm vi](offline-history.md).

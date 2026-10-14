@@ -80,3 +80,9 @@ State trực tiếp của phiên mới xóa ACK cũ và reset cờ rule/sequence
 `http_guard.js` chạy trước bộ parser chung của Node-RED cho POST `/api/command`. Chấp nhận JSON object tối đa 2 KiB: JSON sai trả 400 `invalid_json`, array trả 400 `command_schema`, body quá lớn trả 413 `payload_too_large`, Content-Type khác application/json trả 415 `content_type`. Sau parse, sai mã trả 403; action sai hoặc offline/stale trả 409; lệnh hợp lệ trả 202. Các GET không đi qua guard này. `body-parser@1.20.8` được khai báo trực tiếp và khóa bằng lockfile, là phiên bản đã có trong cây dependency.
 
 Session/seq hạn chế nhầm phiên và lặp lệnh; không thay thế TLS/ACL. Bearer code bảo vệ API local, không bảo vệ topic MQTT công cộng.
+
+## Nhật ký bền vững và gửi bù
+
+Firmware thêm `event_journal.h`: 24 bản ghi NVS, queue RAM 64, ID boot/sequence; MQTT worker ghi/xóa NVS, FSM không chờ flash/mạng. Event trực tiếp có metadata ID/boot/offline/giờ nếu có; `/history` chứa sự kiện gửi lại hoặc phục hồi sau reboot. Session trong bản lịch sử là phiên vận chuyển hiện tại; boot ID/uptime giữ nguồn gốc.
+
+Middleware `history_store.js` lưu/fsync vào runtime/event_journal.jsonl rồi publish `/history_ack` JSON `{session,event_id}` QoS1 không retain. Firmware chỉ xóa head đang chờ khớp receipt; gửi lại sau 2 giây mô phỏng nếu chưa có receipt. Sự kiện lịch sử không cập nhật state/rule/RFID trực tiếp hay tạo command. API GET `/api/door` thêm `event_journal`; Web có tab Lịch sử cửa. `history_telegram.js` gửi outbox theo lô, lưu dấu thành công và giữ dữ liệu lỗi để retry. [Chi tiết và các giới hạn](offline-history.md).

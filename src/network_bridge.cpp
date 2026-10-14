@@ -52,6 +52,7 @@ void reject(const char* reason) {
 
 void callback(char* incomingTopic, byte* payload, unsigned int length) {
   if (strcmp(incomingTopic, historyAckTopic)==0) {
+    if(!awaitingId[0])return;
     StaticJsonDocument<192> receipt;
     if(length>180||deserializeJson(receipt,payload,length))return;
     if(!receipt["session"].is<const char*>()||!receipt["event_id"].is<const char*>())return;

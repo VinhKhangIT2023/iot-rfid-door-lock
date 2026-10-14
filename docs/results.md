@@ -148,3 +148,7 @@ Sửa thêm nhãn select RFID tách khỏi option text và launcher preflight c�
 ## Telegram R1/R2 (14/10/2026)
 
 Bổ sung sau snapshot G9-RC2. 13 fixture Telegram đạt cùng toàn bộ test kế thừa. Người dùng thực hiện một đợt R1 và một đợt R2 trên Wokwi: rule đúng session, mỗi rule có một hàng Telegram API nhận thành công và người dùng xác nhận thấy cả hai tin. R2 sau 15003 ms mô phỏng; đóng cửa khóa lại sau 5004 ms. Không thay firmware, không thêm điều khiển cửa qua chat. [Thiết lập và phạm vi xác minh](telegram.md).
+
+## Lịch sử Offline (14/10/2026)
+
+Đợt bổ sung tiếp theo có thay firmware để lưu NVS/gửi bù, giữ timer/FSM. Khi netoff, người dùng làm R1 và Blue→OPEN→R2→CLOSED; neton gửi đủ 9 sự kiện đúng ID, lưu file và ACK về 0, Telegram nhận đủ và người dùng xác nhận. Software reboot giữ/gửi bù 2 bản ghi NVS; chưa thử mất điện phần cứng thật. Restart Web giữ 13 bản ghi, không gửi lại lịch sử đã xác nhận. 19 bài lịch sử cùng toàn bộ test kế thừa đạt, build firmware đạt; kiểm tra Web tìm/lọc/empty không có lỗi JavaScript. [Cơ chế và giới hạn](offline-history.md).

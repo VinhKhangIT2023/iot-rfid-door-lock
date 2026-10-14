@@ -33,10 +33,10 @@ Telegram lịch sử dùng outbox lưu trên máy. Lỗi API/mạng giữ các b
 
 ## Kiểm thử ngày 14/10/2026
 
-- 18/18 bài lịch sử gồm lưu file/restart, trùng ID/xung đột, lỗi fsync, dòng ghi dở, dữ liệu cũ/retained, không ảnh hưởng điều khiển và outbox Telegram giả lập; toàn bộ test kế thừa đạt.
-- Build ESP32 đạt: RAM 57692 B (17,6%), Flash 805197 B (61,4%).
+- 19/19 bài lịch sử gồm lưu file/restart, trùng ID/xung đột, lỗi fsync, dòng ghi dở, dữ liệu cũ/retained, không ảnh hưởng điều khiển, receipt không tạo vòng lặp và outbox Telegram giả lập; toàn bộ test kế thừa đạt.
+- Build ESP32 đạt: RAM 57692 B (17,6%), Flash 805205 B (61,4%).
 - Người dùng thực hiện R1 và RFID Blue→OPEN→R2→CLOSED khi đã `netoff`. Sau `neton`, 9/9 sự kiện được lưu, Telegram API nhận đủ và người dùng xác nhận thấy đầy đủ; firmware nhận 9 ACK, pending=0, dropped=0.
 - Software reboot: 2 sự kiện SERIAL unlock/no-entry được giữ trong NVS, đọc lại ở boot mới, gửi qua history và ACK về 0. Wokwi có thêm reset watchdog và cảnh báo calibration MAC trong lượt này rồi phục hồi; chưa thử cắt điện thiết bị thật.
-- Restart middleware và kiểm tra Web thực được ghi riêng trong hồ sơ tuần 9 khi hoàn tất.
+- Restart middleware giữ đủ 13 bản ghi/ID đã lưu và không phát thêm tin lịch sử đã xác nhận. Web Online/LOCKED/CLOSED, pending=0, dropped=0. Tab lịch sử, lọc Offline, tìm UID và trạng thái không khớp được kiểm tra trên trình duyệt; không có lỗi JavaScript.
 
 `netoff`, `neton`, `stateoff`, `stateon`, `reboot` chỉ là lệnh Serial chẩn đoán, không được nhận qua API/MQTT command. Stop Simulation dừng cả thiết bị nên không dùng để mô phỏng một người mở cửa khi mất Wi-Fi.
