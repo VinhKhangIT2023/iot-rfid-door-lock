@@ -259,21 +259,21 @@ function renderCards(d){
   }
   if(!(policy.cards||[]).length)empty(list,'Chưa có thẻ','Thêm UID thẻ để cấp quyền RFID.');
 }
-function updateCardSchedule(){
+function updateCardSchedule(syncTimes=false){
   const hotel=el('card-schedule').value==='hotel';el('card-time-fields').hidden=el('card-schedule').value!=='window';el('card-weekday-field').hidden=hotel;
   el('card-from-label').textContent=hotel?'Ngày nhận phòng':'Bắt đầu hiệu lực';el('card-until-label').textContent=hotel?'Ngày trả phòng':'Ngày hết hạn';
   el('card-schedule-help').textContent=hotel?'Nhận phòng 14:00, trả phòng 12:00 (UTC+7). Thẻ dùng liên tục cả ngày và đêm trong thời gian lưu trú; ngày trả phải sau ngày nhận.':'Để trống ngày: không giới hạn. Ngày hết hạn gồm cả ngày đã chọn. Khung giờ qua đêm được tính theo ngày bắt đầu.';
   el('card-stay-preview').hidden=!hotel;
   if(hotel){try{const fields=makeCardSchedule('hotel',el('card-from').value,el('card-until').value,'','',127);el('card-stay-preview').textContent=policyDescription(fields);}catch{el('card-stay-preview').textContent='Chọn ngày nhận và ngày trả để xem thời hạn dùng thẻ.';}}
-  syncSelectControls();syncDateControls();syncTimeControls();
+  syncSelectControls();syncDateControls();if(syncTimes===true)syncTimeControls();
 }
-function resetCardForm(){editingUid=null;el('card-form').reset();el('card-uid').readOnly=false;el('card-form-title').textContent='Thêm thẻ';for(const box of el('card-days').querySelectorAll('input'))box.checked=true;updateCardSchedule();}
+function resetCardForm(){editingUid=null;el('card-form').reset();el('card-uid').readOnly=false;el('card-form-title').textContent='Thêm thẻ';for(const box of el('card-days').querySelectorAll('input'))box.checked=true;updateCardSchedule(true);}
 function editCard(card){
   editingUid=card.uid;el('card-form-title').textContent='Sửa thẻ '+card.name;el('card-uid').value=card.uid;el('card-uid').readOnly=true;el('card-name').value=card.name;el('card-enabled').checked=card.enabled;
   const hotel=isHotelStay(card);el('card-schedule').value=hotel?'hotel':card.start===-1?'all':'window';
   if(card.start!==-1){el('card-start').value=minuteText(card.start);el('card-end').value=minuteText(card.end);}
   for(const box of el('card-days').querySelectorAll('input'))box.checked=!!(card.days&(1<<Number(box.value)));
-  el('card-from').value=epochDate(card.valid_from);el('card-until').value=epochDate(card.valid_until,!hotel);updateCardSchedule();el('card-name').focus();
+  el('card-from').value=epochDate(card.valid_from);el('card-until').value=epochDate(card.valid_until,!hotel);updateCardSchedule(true);el('card-name').focus();
 }
 function stageCards(cards,description){
   const policy=latest?.card_policy;if(!policy?.can_edit||!el('token').value.trim()){policyNotice('Cần mã điều khiển và cấu hình thiết bị đã xác nhận.',true);return;}
@@ -290,7 +290,7 @@ function initializeFeatures(){
   for(const [i,label] of ['T2','T3','T4','T5','T6','T7','CN'].entries()){const wrapper=node('label'),box=document.createElement('input');box.type='checkbox';box.value=i;box.checked=box.defaultChecked=true;wrapper.append(box,document.createTextNode(label));el('card-days').append(wrapper);}
   enhanceSelects();enhanceDates();enhanceTimes();
   el('cards-token').oninput=()=>{el('token').value=el('cards-token').value;lockButtons();renderCards(latest||{});};
-  el('cards-new').onclick=resetCardForm;el('card-reset').onclick=resetCardForm;el('card-schedule').onchange=updateCardSchedule;el('card-from').addEventListener('change',updateCardSchedule);el('card-until').addEventListener('change',updateCardSchedule);
+  el('cards-new').onclick=resetCardForm;el('card-reset').onclick=resetCardForm;el('card-schedule').onchange=()=>updateCardSchedule(true);el('card-from').addEventListener('change',updateCardSchedule);el('card-until').addEventListener('change',updateCardSchedule);
   el('card-last-scan').onclick=()=>{const last=latest?.rfid_history?.slice().reverse().find(r=>r.uid);if(!last){policyNotice('Chưa có UID trực tiếp. Quét thẻ trong Wokwi trước.',true);return;}resetCardForm();el('card-uid').value=last.uid;policyNotice('Đã điền UID vừa quét. Nhập tên/quyền rồi lưu.');};
   el('card-form').onsubmit=event=>{
     event.preventDefault();const uid=el('card-uid').value.replace(/[:\s]/g,'').toUpperCase(),name=el('card-name').value.trim();

@@ -20,7 +20,7 @@ Tuần 9 (14/10/2026): chặn event/ACK khác phiên, đối chiếu ACK bằng 
 - **Điều khiển khóa:** relay/servo, chờ mở cửa và khóa lại theo timer.
 - **Cảnh báo:** phát hiện cửa mở khi chưa được cấp quyền, nhắc khi mở cửa hợp lệ quá lâu.
 - **MQTT:** trao đổi state, event, availability, command và ACK; kiểm tra session/sequence.
-- **Web:** dashboard responsive với năm tab Tổng quan/RFID/Lịch sử/Quản lý thẻ/Kỹ thuật; tìm kiếm, lọc nguồn/ngày, xuất CSV; cảnh báo, status/unlock và hộp xác nhận. Dropdown và lịch ngày đồng bộ giao diện.
+- **Web:** dashboard responsive với năm tab Tổng quan/RFID/Lịch sử/Quản lý thẻ/Kỹ thuật; tìm kiếm, lọc nguồn/ngày, xuất CSV; cảnh báo, status/unlock và hộp xác nhận. Dropdown và lịch ngày đồng bộ giao diện; giờ mỗi ngày có đồng hồ chọn hoặc nhập tay.
 - **Middleware:** mã điều khiển cho API, kiểm tra online/freshness, chặn sử dụng state retained để cấp quyền, hai rule DOOR_FORCED/LEFT_OPEN_WARN và lịch sử xử lý từng rule.
 - **Telegram tùy chọn:** gửi cảnh báo cửa, lịch sử bổ sung và mất/kết nối lại; xem trạng thái/lịch sử bằng nút tiếng Việt hoặc `/status`, `/history`; cấu hình local và chống gửi lặp. [Thiết lập và phạm vi](docs/telegram.md).
 - **Giọng nói trên Web:** nói câu tiếng Việt để chuyển tab hoặc đọc trạng thái; mở khóa qua bước xác nhận. Có thanh mức âm và thông báo lỗi micro/dịch vụ. [Hướng dẫn và phạm vi xác minh](docs/voice-proposal.md).

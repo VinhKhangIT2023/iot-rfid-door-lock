@@ -4,6 +4,12 @@
 
 Chỉ ghi thay đổi đã thực hiện. Project chưa có bản release được đánh số.
 
+## 14/10/2026 — Ô ngày và đồng hồ chọn giờ
+
+- Đưa biểu tượng lịch về mép phải ô; nút xóa ngày nằm đúng vị trí khi có giá trị.
+- Thêm đồng hồ chọn giờ/phút 24 giờ cho khung giờ mỗi ngày, cùng nhập tay HH:mm/HHmm và báo lỗi dữ liệu. Áp dụng/Hủy không tự lưu quyền thẻ.
+- Kiểm tra trực tiếp chọn 09:30, nhập 1845→18:45, Hủy giữ giá trị, giờ sai chặn giá trị, chọn/xóa ngày; bộ test hiện tại 120 fixture cùng bộ kế thừa đạt (26 fixture tính năng). Giữ phạm vi một cửa theo quyết định người dùng.
+
 ## 14/10/2026 — Quản lý thẻ, bot tương tác và điều khiển giọng nói
 
 - Thêm quản lý tối đa 8 thẻ trên Web; quyền ngày/giờ/hạn sử dụng lưu NVS, xác nhận lưu và áp dụng đúng phiên/revision; cần mã điều khiển và cấu hình trực tiếp trước khi sửa.

@@ -14,6 +14,12 @@ Mở tab **Quản lý thẻ**, nhập mã điều khiển. Khi thiết bị tr�
 
 Quyền theo thời gian cần thiết bị đã đồng bộ giờ. Khi chưa biết giờ, thẻ có giới hạn ngày/giờ/hạn sử dụng bị từ chối; thẻ không giới hạn thời gian vẫn hoạt động. Khi mất Wi-Fi, ESP32 tiếp tục kiểm tra quyền đã lưu và đồng hồ đang chạy.
 
+## Chọn giờ mỗi ngày
+
+Ở chế độ **Theo giờ mỗi ngày**, bạn có thể nhập trực tiếp `08:30`, `8:30` hoặc `0830`; khi rời ô, Web chuẩn hóa thành `08:30`. Chỉ nhận giờ 00:00–23:59; giờ sai không được đưa vào quyền thẻ.
+
+Bấm biểu tượng đồng hồ ở bên phải ô để mở bộ chọn. Chọn nhóm 00–11/12–23 giờ, giờ trên mặt đồng hồ, rồi phút (các mốc 5 phút). Nhập tay khi cần phút chính xác khác. **Áp dụng** đưa giờ vào form; **Hủy**, Escape hoặc bấm ra ngoài bỏ lựa chọn chưa áp dụng. Form vẫn cần **Lưu và đồng bộ** cùng bước xác nhận để đổi quyền trên thiết bị. Trên màn hình nhỏ, đồng hồ mở ở cạnh dưới màn hình để các nút luôn nhìn thấy được.
+
 ## Lưu trú khách sạn
 
 Chọn chế độ **Khách sạn**, rồi chọn **Ngày nhận phòng** và **Ngày trả phòng**. Thẻ bắt đầu có quyền lúc 14:00 ngày nhận, hết quyền đúng 12:00 ngày trả, theo UTC+7. Thẻ hoạt động liên tục giữa hai mốc, kể cả qua đêm và khoảng 12:00–14:00 ở các ngày nằm giữa kỳ lưu trú; không tạo khoảng chặn mỗi ngày. Ngày trả phải sau ngày nhận. Web hiển thị bản xem trước trước khi bạn lưu/xác nhận; firmware kiểm tra hai mốc thời gian bằng chính sách hiện có.
