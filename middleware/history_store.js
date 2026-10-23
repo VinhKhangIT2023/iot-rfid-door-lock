@@ -43,7 +43,7 @@ function createStore({file=FILE,fsImpl=fs}={}){
       historical:!!historical,data:{...data}};
     append(row);return {row,duplicate:false};
   }
-  return {accept,has:id=>records.has(id),query:options=>require('./history_query').query([...records.values()],options),view:()=>({ok:healthy,total:records.size,events:[...records.values()].slice(-300)}),
+  return {accept,has:id=>records.has(id),query:options=>require('./history_query').query([...records.values()],options),view:()=>({ok:healthy,total:records.size,events:[...records.values()].slice(-300).map(require('./event_presentation').present)}),
     pending:()=>[...records.values()].filter(r=>r.historical&&!done.has(r.event_id)),
     complete:ids=>{for(const id of ids)if(records.has(id)&&!done.has(id))append({type:'history_telegram_done',event_id:id,time_utc:new Date().toISOString()});}};
 }

@@ -4,6 +4,12 @@
 
 Chỉ ghi thay đổi đã thực hiện. Project chưa có bản release được đánh số.
 
+## 23/10/2026 — Hiển thị đầy đủ hoạt động cửa trên Web
+
+- Tổng quan hiển thị sự kiện đã lưu từ RFID, mở khóa Web/giọng nói và lịch sử gửi bù; giữ nguồn lịch sử riêng với trạng thái cửa hiện tại.
+- Diễn giải lịch sử bằng tiếng Việt, nhận diện rõ “Mở khóa từ Web”; thêm nút xóa toàn bộ bộ lọc và liên kết từ RFID đến lịch sử đầy đủ.
+- Giữ nguyên dữ liệu gốc và cách chống trùng; không đổi firmware hoặc bộ đếm RFID trực tiếp.
+
 ## 14/10/2026 — Ô ngày và đồng hồ chọn giờ
 
 - Đưa biểu tượng lịch về mép phải ô; nút xóa ngày nằm đúng vị trí khi có giá trị.

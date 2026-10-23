@@ -95,16 +95,20 @@ function renderRfid(d){
   const rows=Array.isArray(d.rfid_history)?d.rfid_history:[];
   const counts=d.rfid_counts||{};
   for(const key of ['total','accepted','denied','ignored'])el('count-'+key).textContent=String(counts[key]||0);
-  const recent=el('rfid-recent');recent.replaceChildren();
-  for(const row of rows.slice(-3).reverse()){
-    const label=outcomeLabels[row.outcome];if(!label)continue;
-    const item=node('div',undefined,'event-item'),copy=node('div',undefined,'event-copy'),time=node('time',stamp(row.time_utc),'event-time');
-    time.dateTime=row.time_utc;time.title=stamp(row.time_utc,true)+' (UTC+7)';
-    copy.append(node('b',row.name?'Thẻ '+row.name:row.uid?'Thẻ '+formatUid(row.uid):label[0]),node('p',row.uid?formatUid(row.uid):rfidDetail(row)),pill(label[0],label[1]));
-    item.append(icon(label[3],label[2]),copy,time);recent.append(item);
-  }
-  if(!rows.length)empty(recent,'Chưa ghi nhận lượt quét','Quét thẻ trên đầu đọc Wokwi để theo dõi kết quả tại đây.');
   renderRfidTable(rows);
+}
+function renderActivity(d){
+  const rows=d.event_journal?.events||[],recent=el('door-recent');recent.replaceChildren();
+  for(const row of rows.slice(-5).reverse()){
+    const text=row.presentation||{},kind=journalSource(row),warning=['DOOR_FORCED','LEFT_OPEN_WARN'].includes(row.data.evt);
+    const item=node('div',undefined,'event-item'),copy=node('div',undefined,'event-copy');
+    const time=node('time',stamp(row.event_time_utc||row.time_utc,true),'event-time');
+    time.dateTime=row.event_time_utc||row.time_utc;
+    time.title=(row.event_time_utc?'Lúc xảy ra: ':'Chưa biết giờ xảy ra; nhận: ')+stamp(time.dateTime,true)+' · UTC+7';
+    copy.append(node('b',text.title||journalLabels[row.data.evt]||'Hoạt động của cửa'),node('p',text.detail||row.data.detail||'Đã ghi nhận hoạt động.'),pill(text.source||{offline:'Xảy ra lúc mất mạng',retry:'Nhận bổ sung sau đó',live:'Ghi nhận trực tiếp'}[kind],kind==='live'?'neutral':'warning'));
+    item.append(icon(warning?'alert':row.data.evt==='UNLOCK_GRANTED'?'lock':'check',warning?'amber':'blue'),copy,time);recent.append(item);
+  }
+  if(!rows.length)empty(recent,'Chưa có hoạt động được lưu','Các lượt mở khóa, đóng cửa và lịch sử gửi bù sẽ xuất hiện tại đây.','door');
 }
 function renderRfidTable(rows=latest?.rfid_history||[]){
   const filter=el('rfid-filter').value,query=el('rfid-search').value.trim().toLowerCase();
@@ -163,7 +167,7 @@ async function refresh(){
     const response=await fetch('/api/door',{cache:'no-store',signal:AbortSignal.timeout(6000)});
     if(!response.ok)throw Error('http');
     const d=await response.json();latest=d;
-    renderConnection(d);renderRfid(d);renderAlerts(d);renderAck(d);renderHistory(d);renderJournal(d);renderCards(d);renderMonitor(d);if(!el('page-journal').hidden)refreshJournal();
+    renderConnection(d);renderRfid(d);renderActivity(d);renderAlerts(d);renderAck(d);renderHistory(d);renderJournal(d);renderCards(d);renderMonitor(d);if(!el('page-journal').hidden)refreshJournal();
     el('updated').textContent='Cập nhật '+stamp(new Date().toISOString())+' · UTC+7';
   }catch(error){
     renderConnection({...latest,ready:false,connection:'app_offline',age_ms:null});
@@ -181,9 +185,9 @@ function renderJournal(d=latest||{}){
   for(const r of (journalResult?matches:matches.slice().reverse())){
     const tr=node('tr'),when=node('td'),what=node('td'),source=node('td'),detail=node('td');
     when.append(node('span',r.event_time_utc?stamp(r.event_time_utc,true):'Sau khởi động '+(r.data.uptime_ms/1000).toFixed(1)+'s'),node('small',r.event_time_utc?'Giờ thiết bị · UTC+7':'Chưa đồng bộ giờ · boot '+r.data.boot_id),node('small','Nhận '+stamp(r.time_utc,true)));
-    what.append(node('b',journalLabels[r.data.evt]||r.data.evt));
+    what.append(node('b',r.presentation?.title||journalLabels[r.data.evt]||r.data.evt));
     source.append(pill({offline:'Offline',retry:'Gửi lại khi Online',live:'Trực tiếp'}[journalSource(r)],journalSource(r)==='live'?'success':'warning'));
-    detail.append(node('span',r.data.detail||'—'),node('small','ID '+r.event_id));tr.append(when,what,source,detail);body.append(tr);
+    detail.append(node('span',r.presentation?.detail||r.data.detail||'—'));detail.title='Mã sự kiện: '+r.event_id;tr.append(when,what,source,detail);body.append(tr);
   }
   el('journal-empty').hidden=matches.length>0;el('journal-empty').textContent=journal.total?'Không có sự kiện khớp bộ lọc.':'Chưa có sự kiện được lưu.';
   const total=journalResult?.total||0,limit=journalResult?.limit||50;el('journal-range').textContent=total?((journalPage*limit+1)+'–'+Math.min((journalPage+1)*limit,total)+' / '+total):'0 sự kiện';el('journal-prev').disabled=journalPage===0;el('journal-next').disabled=!journalResult?.has_more;el('journal-export').href='/api/history.csv?'+journalFilters();
@@ -207,12 +211,14 @@ for(const [index,page] of pages.entries()){
     if(target!==null){event.preventDefault();selectPage(pages[target],true);}
   });
 }
-el('show-rfid').onclick=()=>selectPage('rfid',true);
+el('show-journal').onclick=()=>{clearJournalFilters();selectPage('journal',true);};
+el('rfid-show-journal').onclick=()=>{clearJournalFilters();selectPage('journal',true);};
 el('rfid-search').addEventListener('input',()=>renderRfidTable());
 el('rfid-filter').addEventListener('change',()=>renderRfidTable());
 el('journal-search').addEventListener('input',resetJournalPage);
 el('journal-filter').addEventListener('change',resetJournalPage);
 el('journal-from').addEventListener('change',resetJournalPage);el('journal-to').addEventListener('change',resetJournalPage);
+el('journal-clear').onclick=()=>{clearJournalFilters();refreshJournal();};
 el('journal-prev').onclick=()=>{journalPage=Math.max(0,journalPage-1);refreshJournal();};el('journal-next').onclick=()=>{journalPage++;refreshJournal();};
 el('token').addEventListener('input',()=>{el('cards-token').value=el('token').value;lockButtons();renderCards(latest||{});});
 el('status').onclick=()=>send('status');
@@ -223,6 +229,10 @@ el('today').textContent=new Intl.DateTimeFormat('vi-VN',{weekday:'long',day:'num
 
 
 function journalSource(row){return row.data.offline?'offline':row.historical?'retry':'live';}
+function clearJournalFilters(){
+  for(const id of ['journal-search','journal-from','journal-to'])el(id).value='';
+  el('journal-filter').value='all';journalPage=0;journalResult=null;syncSelectControls();syncDateControls();
+}
 function journalFilters(){return new URLSearchParams({source:el('journal-filter').value,q:el('journal-search').value.trim(),from:el('journal-from').value,to:el('journal-to').value});}
 function resetJournalPage(){journalPage=0;journalResult=null;refreshJournal();}
 let journalFetchingKey='';

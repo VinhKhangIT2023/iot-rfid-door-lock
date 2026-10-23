@@ -39,3 +39,6 @@ main{padding:30px 36px 18px;max-width:1480px;margin:auto}.page-heading{display:f
 @media(max-width:650px){.form-row>.control-field:nth-child(2) .clock-popover{left:auto;right:0}}
 
 @media(max-width:650px){.time-control .clock-popover,.time-control.opens-up .clock-popover{position:fixed;left:50%;right:auto;top:auto;bottom:16px;transform:translateX(-50%);width:min(300px,calc(100vw - 24px));max-height:calc(100dvh - 32px);overflow:auto}}
+
+/* Durable activity uses full timestamps and a source badge. */
+#door-recent .event-time{white-space:normal;max-width:100px;line-height:1.5;text-align:right;flex-shrink:0}#door-recent .event-copy .pill{margin-top:7px;font-size:9px}.journal-dates{flex-wrap:wrap}

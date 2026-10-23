@@ -22,6 +22,14 @@ function detail(data){
     default:return 'Đã ghi nhận một hoạt động của thiết bị.';
   }
 }
-function title(data){return LABELS[data.evt]||'Hoạt động của cửa';}
+function title(data){
+  if(data.evt==='UNLOCK_GRANTED'){
+    if(String(data.detail||'').includes('src=REMOTE'))return 'Mở khóa từ Web';
+    if(String(data.detail||'').includes('src=RFID'))return 'Mở khóa bằng thẻ';
+  }
+  return LABELS[data.evt]||'Hoạt động của cửa';
+}
 function source(row){return row.data.offline?'Xảy ra lúc mất mạng':row.historical?'Nhận bổ sung sau đó':'Ghi nhận trực tiếp';}
-module.exports={LABELS,detail,title,source};
+// Derived wording is added to API views only; the original stored event stays intact.
+function present(row){return {...row,presentation:{title:title(row.data),detail:detail(row.data),source:source(row)}};}
+module.exports={LABELS,detail,title,source,present};

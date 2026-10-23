@@ -31,4 +31,23 @@ test('Telegram failure keeps outbox; controlled retry without parallel requests'
 test('Disabled Telegram preserves historical outbox without network calls',async()=>{const s=store();s.accept(data(),now,true);let calls=0;const w=tg.createWorker({store:s,readConfig:()=>({...config,enabled:false}),fetchImpl:async()=>{calls++;return ok();}});await w.tick();assert.equal(calls,0);assert.equal(s.pending().length,1);w.close();});
 test('History batches are bounded and cannot exceed Telegram text size',async()=>{const s=store();for(let i=1;i<=20;i++)s.accept({...data(i),detail:'x'.repeat(160)},now,true);let text;const w=tg.createWorker({store:s,readConfig:()=>config,fetchImpl:async(_,o)=>{text=JSON.parse(o.body).text;return ok();}});await w.tick();assert.equal(s.pending().length,12);assert(text.length<=4096);w.close();});
 test('300-row UI window does not discard persistent history or pending notifications',()=>{const s=store();for(let i=1;i<=305;i++)s.accept(data(i),now,true);assert.equal(s.view().events.length,300);assert.equal(s.view().total,305);assert.equal(s.pending().length,305);});
+test('Web unlock is visible and searchable after restart without altering raw evidence',()=>{
+  const file=path.join(root,'web-activity.jsonl'),s=history.createStore({file});
+  const d={...data(1,'UNLOCK_GRANTED'),state:'UNLOCKED_WAIT_OPEN',detail:'src=REMOTE cmd=unlock',offline:false,replayed:false};
+  s.accept(d,now,false);const reopened=history.createStore({file});
+  const result=reopened.query({q:'Mở khóa từ Web'});assert.equal(result.total,1);
+  assert.equal(result.events[0].presentation.title,'Mở khóa từ Web');
+  assert.equal(reopened.view().events[0].presentation.source,'Ghi nhận trực tiếp');
+  assert.deepEqual(result.events[0].data,d);assert(!fs.readFileSync(file,'utf8').includes('presentation'));
+});
+test('Offline activities remain visible on Web after Telegram delivery without changing live state',()=>{
+  const s=store(),m=live(),before=core.view(m,Date.now());
+  const d={...data(1,'UNLOCK_GRANTED'),state:'UNLOCKED_WAIT_OPEN',detail:'src=RFID uid=01020304 name=blue'};
+  run(m,s,d);run(m,s,data(2));s.complete([d.event_id,data(2).event_id]);
+  const view=s.view();assert.equal(view.total,2);assert.equal(s.pending().length,0);
+  assert.equal(view.events[0].presentation.title,'Mở khóa bằng thẻ');assert(view.events[0].presentation.detail.includes('blue'));
+  assert(view.events.every(r=>r.presentation.source==='Xảy ra lúc mất mạng'));
+  assert.equal(s.query({source:'offline'}).total,2);assert.equal(s.query({source:'live'}).total,0);
+  assert.deepEqual(m.state,before.state);assert.equal(m.rfidCounts.total,0);assert.equal(m.alerts.length,0);
+});
 (async()=>{let failed=0;try{for(const t of tests){try{await t.fn();console.log('PASS: '+t.name);}catch(e){failed++;console.error('FAIL: '+t.name+' — '+e.message);}}}finally{fs.rmSync(root,{recursive:true,force:true});}console.log(`SUMMARY: ${tests.length-failed}/${tests.length} history fixtures passed. Disk tests local; all Telegram HTTP mocked; no live Wokwi implied.`);process.exitCode=failed?1:0;})();

@@ -15,7 +15,7 @@ function query(rows,options={}){
   if(!Number.isInteger(page)||page<0||page>100000||!Number.isInteger(limit)||limit<1||limit>100)throw Error('pagination');
   const matches=rows.filter(r=>{const at=Date.parse(r.event_time_utc||r.time_utc);return (kind==='all'||source(r)===kind)&&
     (from===null||at>=from)&&(to===null||at<to)&&(!q||(presentation.title(r.data)+' '+presentation.detail(r.data)+' '+r.data.evt+' '+r.data.detail+' '+r.event_id).toLowerCase().includes(q));}).reverse();
-  return {total:matches.length,page,limit,has_more:(page+1)*limit<matches.length,events:matches.slice(page*limit,(page+1)*limit),matches};
+  return {total:matches.length,page,limit,has_more:(page+1)*limit<matches.length,events:matches.slice(page*limit,(page+1)*limit).map(presentation.present),matches};
 }
 function cell(value){let text=String(value??'');if(/^[=+\-@]/.test(text))text="'"+text;return '"'+text.replace(/"/g,'""')+'"';}
 function csv(rows){

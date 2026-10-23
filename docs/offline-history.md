@@ -50,3 +50,10 @@ Ba nguồn trong Web không trùng nhau:
 - **Trực tiếp:** hoạt động được nhận trực tiếp, không phải bản gửi lại.
 
 “Gửi bù” trong các báo cáo cũ là tên chung cho cả hai nhóm đầu. Chọn ngày bằng lịch trên Web (UTC+7), ngày kết thúc gồm cả ngày được chọn. Không biết giờ thực lúc xảy ra thì lọc theo ngày nhận, Web ghi rõ điều đó. Tìm theo tên thẻ/mã thẻ/mô tả hoặc mã event. **Xuất CSV** giữ cùng bộ lọc, tối đa 10.000 dòng; CSV giữ các trường gốc để đối chiếu kỹ thuật.
+
+## Xem hoạt động trên Web
+
+- **Tổng quan → Hoạt động cửa gần đây** hiển thị 5 sự kiện được lưu gần nhất, gồm thẻ, mở khóa từ Web và lịch sử gửi bù. Nhãn cho biết sự kiện xảy ra lúc mất mạng, nhận bổ sung hay trực tiếp.
+- **Lịch sử cửa** xem toàn bộ các sự kiện đã lưu. Tìm “Mở khóa từ Web” để xem các lượt thiết bị đã cấp quyền từ nút bấm hoặc giọng nói; hai cách này dùng chung luồng lệnh, chưa phân biệt riêng trong nhật ký. **Xóa bộ lọc** bỏ đồng thời tìm kiếm, nguồn và khoảng ngày.
+- **Hoạt động RFID** chỉ thống kê RFID trực tiếp trong phiên dịch vụ. Sự kiện gửi bù và mở khóa từ Web không cộng vào bộ đếm này; có nút sang lịch sử đầy đủ.
+- Web chỉ nhận được sự kiện Offline sau khi thiết bị kết nối lại. Sự kiện quá khứ không thay trạng thái cửa hiện tại. Lệnh bị từ chối, bị hủy hoặc chưa được thiết bị cấp quyền không được ghi thành một lượt mở khóa thành công.
